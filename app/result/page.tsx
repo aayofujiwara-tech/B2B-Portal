@@ -9,13 +9,16 @@ import {
   runAssessment,
   addAssessmentLog,
   consumeSlot,
+  getDiseaseNotes,
   type AssessmentResult,
+  type DiseaseNote,
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
 function ResultContent() {
   const searchParams = useSearchParams();
   const [result, setResult] = useState<AssessmentResult | null>(null);
+  const [diseaseNotes, setDiseaseNotes] = useState<DiseaseNote[]>([]);
   const [showResult, setShowResult] = useState(false);
   const processedRef = useRef(false);
 
@@ -54,6 +57,7 @@ function ResultContent() {
     }
 
     setResult(assessmentResult);
+    setDiseaseNotes(getDiseaseNotes(disease));
     trackEvent("result_view", "view_result", assessmentResult.status);
 
     const timer = setTimeout(() => setShowResult(true), 300);
@@ -181,6 +185,42 @@ function ResultContent() {
               {reason}
             </li>
           ))}
+        </ul>
+      </div>
+
+      {/* 専門スタッフからの補足 */}
+      {diseaseNotes.length > 0 && (
+        <div className="mb-6 rounded-xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
+          <h3 className="mb-3 text-sm font-bold text-teal-800">
+            専門スタッフからの補足
+          </h3>
+          <ul className="space-y-2.5">
+            {diseaseNotes.map((dn, i) => (
+              <li key={i} className="text-sm">
+                <span className="font-semibold text-teal-700">{dn.label}：</span>
+                <span className="text-slate-700">{dn.note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 物件の強み */}
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-3 text-sm font-bold text-slate-800">物件の強み</h3>
+        <ul className="space-y-1.5 text-sm text-slate-600">
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-primary">&#x2022;</span>
+            保証人不要・初期費用分割相談可・生活保護対応
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-primary">&#x2022;</span>
+            【塚本・歌島】JR塚本駅徒歩圏内の好立地
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-primary">&#x2022;</span>
+            【豊新】阪急上新庄駅利用・10階建の開放感
+          </li>
         </ul>
       </div>
 

@@ -147,6 +147,50 @@ export function addBookingLog(
   return newLog;
 }
 
+// --- Disease Notes (備考) ---
+
+export interface DiseaseNote {
+  label: string;
+  note: string;
+}
+
+export function getDiseaseNotes(disease: string): DiseaseNote[] {
+  const notes: DiseaseNote[] = [];
+
+  if (
+    disease.includes("脳血管") ||
+    disease.includes("心疾患")
+  ) {
+    notes.push({
+      label: "カテーテル管理",
+      note: "原則、往診時に医師が交換対応を行います",
+    });
+  }
+
+  if (disease.includes("人工呼吸器")) {
+    notes.push({
+      label: "人工呼吸器・気管カニューレ",
+      note: "夜間の吸引が不要な場合は受入相談可能です。まずは詳細をお聞かせください",
+    });
+  }
+
+  if (disease.includes("透析")) {
+    notes.push({
+      label: "腹膜透析（CAPD）",
+      note: "要相談項目ですが、個別の調整が可能です",
+    });
+  }
+
+  if (disease.includes("骨折") || disease.includes("整形")) {
+    notes.push({
+      label: "抜糸",
+      note: "提携クリニックの看護師にて対応可能です",
+    });
+  }
+
+  return notes;
+}
+
 // --- Assessment Logic ---
 
 export interface AssessmentInput {
