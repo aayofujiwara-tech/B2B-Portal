@@ -8,9 +8,12 @@ import {
   reloadSlots,
   getAssessmentLogs,
   getBookingLogs,
+  FACILITY_IDS,
+  FACILITY_LABELS,
   type SlotConfig,
   type AssessmentLog,
   type BookingLog,
+  type FacilityId,
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
@@ -59,16 +62,26 @@ function AdminAuth({ onAuth }: { onAuth: () => void }) {
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
-  const [slotConfig, setSlotConfig] = useState<SlotConfig | null>(null);
+  const [facilitySlots, setFacilitySlots] = useState<
+    Record<FacilityId, SlotConfig> | null
+  >(null);
+  const [newTotals, setNewTotals] = useState<Record<FacilityId, number>>({
+    tsukamoto: 5,
+    toyoshin: 5,
+    utajima: 5,
+  });
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);
-  const [newTotal, setNewTotal] = useState(5);
   const [activeTab, setActiveTab] = useState<
     "slots" | "assessments" | "bookings"
   >("slots");
 
   const loadData = () => {
-    setSlotConfig(getSlotConfig());
+    const slots = {} as Record<FacilityId, SlotConfig>;
+    for (const id of FACILITY_IDS) {
+      slots[id] = getSlotConfig(id);
+    }
+    setFacilitySlots(slots);
     setAssessmentLogs(getAssessmentLogs());
     setBookingLogs(getBookingLogs());
   };
@@ -87,13 +100,13 @@ export default function AdminPage() {
     return <AdminAuth onAuth={() => setAuthed(true)} />;
   }
 
-  const handleReload = () => {
-    reloadSlots(newTotal);
-    trackEvent("admin_action", "reload_slots", `total=${newTotal}`);
+  const handleReload = (facilityId: FacilityId) => {
+    reloadSlots(newTotals[facilityId], facilityId);
+    trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
     loadData();
   };
 
-  if (!slotConfig) {
+  if (!facilitySlots) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
@@ -104,8 +117,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const remaining = Math.max(0, slotConfig.totalSlots - slotConfig.usedSlots);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -138,101 +149,92 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Slot Management */}
+        {/* Slot Management — per-facility */}
         {activeTab === "slots" && (
           <div className="space-y-6 animate-fade-in">
-            {/* Current Status */}
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-base font-bold text-slate-800">
-                現在の枠状況
-              </h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p className="text-2xl font-bold text-primary">
-                    {slotConfig.totalSlots}
-                  </p>
-                  <p className="text-xs text-muted">総枠数</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p className="text-2xl font-bold text-slate-800">
-                    {slotConfig.usedSlots}
-                  </p>
-                  <p className="text-xs text-muted">使用済み</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p
-                    className={`text-2xl font-bold ${remaining > 0 ? "text-emerald-600" : "text-danger"}`}
-                  >
-                    {remaining}
-                  </p>
-                  <p className="text-xs text-muted">残り</p>
-                </div>
-                <div className="rounded-lg bg-slate-50 p-4 text-center">
-                  <p
-                    className={`text-sm font-bold ${
-                      slotConfig.status === "available"
-                        ? "text-emerald-600"
-                        : "text-amber-600"
-                    }`}
-                  >
-                    {slotConfig.status === "available"
-                      ? "受入可能"
-                      : "調整中"}
-                  </p>
-                  <p className="text-xs text-muted">ステータス</p>
-                </div>
-              </div>
-
-              {/* Visual Progress */}
-              <div className="mt-4 flex gap-1.5">
-                {Array.from({ length: slotConfig.totalSlots }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-6 flex-1 rounded-sm ${
-                      i < slotConfig.usedSlots
-                        ? "bg-primary"
-                        : "border border-slate-200 bg-slate-50"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-muted">
-                最終リロード日: {slotConfig.lastReloadDate}
-              </p>
-            </div>
-
-            {/* Reload Control */}
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-base font-bold text-slate-800">
-                枠のリロード（補充）
-              </h2>
-              <p className="mb-4 text-sm text-muted">
-                新しい受入枠数を設定して、枠をリセットします。使用済み枠は0にリセットされます。
-              </p>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    新しい総枠数
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={newTotal}
-                    onChange={(e) =>
-                      setNewTotal(Math.max(1, parseInt(e.target.value) || 1))
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <button
-                  onClick={handleReload}
-                  className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+            {FACILITY_IDS.map((id) => {
+              const sc = facilitySlots[id];
+              const rem = Math.max(0, sc.totalSlots - sc.usedSlots);
+              return (
+                <div
+                  key={id}
+                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
                 >
-                  枠をリロード
-                </button>
-              </div>
-            </div>
+                  <h2 className="mb-4 text-base font-bold text-slate-800">
+                    {FACILITY_LABELS[id]}
+                  </h2>
+
+                  {/* Stats */}
+                  <div className="mb-3 grid grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-xl font-bold text-primary">{sc.totalSlots}</p>
+                      <p className="text-xs text-muted">総枠</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-xl font-bold text-slate-800">{sc.usedSlots}</p>
+                      <p className="text-xs text-muted">使用済</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className={`text-xl font-bold ${rem > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {rem}
+                      </p>
+                      <p className="text-xs text-muted">残り</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className={`text-sm font-bold ${sc.status === "available" ? "text-emerald-600" : "text-amber-600"}`}>
+                        {sc.status === "available" ? "受入可能" : "調整中"}
+                      </p>
+                      <p className="text-xs text-muted">状態</p>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mb-2 flex gap-1">
+                    {Array.from({ length: sc.totalSlots }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-5 flex-1 rounded-sm ${
+                          i < sc.usedSlots
+                            ? "bg-primary"
+                            : "border border-slate-200 bg-slate-50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="mb-4 text-xs text-muted">
+                    最終リロード: {sc.lastReloadDate}
+                  </p>
+
+                  {/* Reload */}
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-xs font-medium text-slate-700">
+                        新しい総枠数
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={newTotals[id]}
+                        onChange={(e) =>
+                          setNewTotals((prev) => ({
+                            ...prev,
+                            [id]: Math.max(1, parseInt(e.target.value) || 1),
+                          }))
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleReload(id)}
+                      className="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+                    >
+                      リロード
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

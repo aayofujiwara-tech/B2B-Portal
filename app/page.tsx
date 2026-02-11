@@ -33,6 +33,13 @@ const TIMING_OPTIONS = [
   "未定",
 ];
 
+const FACILITY_OPTIONS = [
+  { id: "tsukamoto", label: "塚本" },
+  { id: "toyoshin", label: "豊新" },
+  { id: "utajima", label: "歌島" },
+  { id: "any", label: "どこでも可" },
+];
+
 export default function TopPage() {
   const router = useRouter();
   const [disease, setDisease] = useState("");
@@ -40,6 +47,7 @@ export default function TopPage() {
   const [gender, setGender] = useState("");
   const [budget, setBudget] = useState("");
   const [timing, setTiming] = useState("");
+  const [facility, setFacility] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
 
@@ -47,7 +55,7 @@ export default function TopPage() {
     setSavedContact(getSavedContact());
   }, []);
 
-  const isFormValid = disease && adl && gender && budget && timing;
+  const isFormValid = disease && adl && gender && budget && timing && facility;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +70,7 @@ export default function TopPage() {
       gender,
       budget,
       timing,
+      facility,
     });
 
     setTimeout(() => {
@@ -89,7 +98,7 @@ export default function TopPage() {
 
         {/* Slot Progress */}
         <div className="mb-8">
-          <SlotProgressBar />
+          <SlotProgressBar facilityId={facility || undefined} />
         </div>
 
         {/* Repeater Shortcut */}
@@ -239,6 +248,32 @@ export default function TopPage() {
                     }`}
                   >
                     {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Facility */}
+            <div className="mb-5">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                希望施設
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {FACILITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setFacility(opt.id);
+                      trackEvent("assessment_start", "select_facility", opt.id);
+                    }}
+                    className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                      facility === opt.id
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {opt.label}
                   </button>
                 ))}
               </div>

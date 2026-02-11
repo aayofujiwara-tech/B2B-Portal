@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSlotConfig, type SlotConfig } from "@/app/lib/slotStore";
+import {
+  getSlotConfig,
+  getAggregateSlots,
+  FACILITY_IDS,
+  FACILITY_LABELS,
+  type FacilityId,
+} from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
 function getElapsedLabel(isoTimestamp: string): string {
@@ -14,34 +20,48 @@ function getElapsedLabel(isoTimestamp: string): string {
   return `${Math.floor(hr / 24)}日前`;
 }
 
-export default function SlotProgressBar() {
-  const [config, setConfig] = useState<SlotConfig | null>(null);
+interface SlotProgressBarProps {
+  facilityId?: string;
+}
+
+export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
+  const [total, setTotal] = useState(0);
+  const [used, setUsed] = useState(0);
   const [elapsed, setElapsed] = useState("");
+  const [statusLabel, setStatusLabel] = useState("");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const c = getSlotConfig();
-    setConfig(c);
-    setElapsed(getElapsedLabel(c.lastReloadTimestamp || c.lastReloadDate));
-    trackEvent(
-      "slot_view",
-      "view_progress_bar",
-      `${c.totalSlots - c.usedSlots}/${c.totalSlots}`
-    );
-    const timer = setInterval(() => {
-      setElapsed(getElapsedLabel(c.lastReloadTimestamp || c.lastReloadDate));
-    }, 60000);
+    let t: number, u: number, ts: string;
+    if (facilityId && facilityId !== "any" && FACILITY_IDS.includes(facilityId as FacilityId)) {
+      const c = getSlotConfig(facilityId as FacilityId);
+      t = c.totalSlots;
+      u = c.usedSlots;
+      ts = c.lastReloadTimestamp || c.lastReloadDate;
+      setStatusLabel(FACILITY_LABELS[facilityId as FacilityId]);
+    } else {
+      const agg = getAggregateSlots();
+      t = agg.total;
+      u = agg.used;
+      ts = agg.lastReloadTimestamp;
+      setStatusLabel("全拠点合計");
+    }
+    setTotal(t);
+    setUsed(u);
+    setElapsed(getElapsedLabel(ts));
+    setReady(true);
+    trackEvent("slot_view", "view_progress_bar", `${t - u}/${t}`);
+    const timer = setInterval(() => setElapsed(getElapsedLabel(ts)), 60000);
     return () => clearInterval(timer);
-  }, []);
+  }, [facilityId]);
 
-  if (!config) {
-    return (
-      <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
-    );
+  if (!ready) {
+    return <div className="h-24 animate-pulse rounded-xl bg-slate-100" />;
   }
 
-  const remaining = Math.max(0, config.totalSlots - config.usedSlots);
-  const ratio = config.usedSlots / config.totalSlots;
-  const isAdjusting = config.status === "adjusting" || remaining === 0;
+  const remaining = Math.max(0, total - used);
+  const ratio = total > 0 ? used / total : 0;
+  const isAdjusting = remaining === 0;
 
   // Dynamic color tiers based on remaining ratio
   const getBarColor = (): string => {
@@ -71,7 +91,7 @@ export default function SlotProgressBar() {
             className={`inline-block h-2.5 w-2.5 rounded-full ${getIndicatorColor()}`}
           />
           <h3 className="text-sm font-bold text-slate-800">
-            今週の優先面談枠
+            今週の優先面談枠（{statusLabel}）
           </h3>
         </div>
         {isAdjusting ? (
@@ -87,11 +107,11 @@ export default function SlotProgressBar() {
 
       {/* Progress Bar */}
       <div className="mb-2 flex gap-1.5">
-        {Array.from({ length: config.totalSlots }).map((_, i) => (
+        {Array.from({ length: total }).map((_, i) => (
           <div
             key={i}
             className={`h-4 flex-1 rounded-sm transition-colors ${
-              i < config.usedSlots
+              i < used
                 ? getBarColor()
                 : "bg-slate-100 border border-slate-200"
             }`}
@@ -102,12 +122,12 @@ export default function SlotProgressBar() {
       {/* Text representation */}
       <div className="flex items-center justify-between text-xs text-muted">
         <span>
-          {Array.from({ length: config.totalSlots })
-            .map((_, i) => (i < config.usedSlots ? "\u25A0" : "\u25A1"))
+          {Array.from({ length: total })
+            .map((_, i) => (i < used ? "\u25A0" : "\u25A1"))
             .join("")}
         </span>
         <span>
-          {config.usedSlots}/{config.totalSlots} 枠使用中
+          {used}/{total} 枠使用中
         </span>
       </div>
 

@@ -39,9 +39,23 @@ export interface BookingLog {
   notes: string;
 }
 
-const SLOT_KEY = "b2b_portal_slots";
+// --- Facility Definitions ---
+
+export const FACILITY_IDS = ["tsukamoto", "toyoshin", "utajima"] as const;
+export type FacilityId = (typeof FACILITY_IDS)[number];
+
+export const FACILITY_LABELS: Record<FacilityId, string> = {
+  tsukamoto: "塚本",
+  toyoshin: "豊新",
+  utajima: "歌島",
+};
+
 const LOG_KEY = "b2b_portal_assessment_logs";
 const BOOKING_KEY = "b2b_portal_booking_logs";
+
+function slotKey(id: FacilityId): string {
+  return `b2b_slots_${id}`;
+}
 
 const DEFAULT_CONFIG: SlotConfig = {
   totalSlots: 5,
@@ -51,44 +65,71 @@ const DEFAULT_CONFIG: SlotConfig = {
   status: "available",
 };
 
-// --- Slot Management ---
+// --- Slot Management (per-facility) ---
 
-export function getSlotConfig(): SlotConfig {
+export function getSlotConfig(facilityId: FacilityId): SlotConfig {
   if (typeof window === "undefined") return DEFAULT_CONFIG;
-  const stored = localStorage.getItem(SLOT_KEY);
+  const stored = localStorage.getItem(slotKey(facilityId));
   if (!stored) {
-    localStorage.setItem(SLOT_KEY, JSON.stringify(DEFAULT_CONFIG));
+    localStorage.setItem(slotKey(facilityId), JSON.stringify(DEFAULT_CONFIG));
     return DEFAULT_CONFIG;
   }
   return JSON.parse(stored);
 }
 
-export function saveSlotConfig(config: SlotConfig): void {
+export function saveSlotConfig(
+  config: SlotConfig,
+  facilityId: FacilityId
+): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SLOT_KEY, JSON.stringify(config));
+  localStorage.setItem(slotKey(facilityId), JSON.stringify(config));
 }
 
-export function getRemainingSlots(): number {
-  const config = getSlotConfig();
-  return Math.max(0, config.totalSlots - config.usedSlots);
-}
-
-export function consumeSlot(): boolean {
-  const config = getSlotConfig();
-  if (config.usedSlots >= config.totalSlots) {
-    config.status = "adjusting";
-    saveSlotConfig(config);
-    return false;
+export function getAggregateSlots(): {
+  total: number;
+  used: number;
+  remaining: number;
+  status: SlotConfig["status"];
+  lastReloadTimestamp: string;
+} {
+  let total = 0;
+  let used = 0;
+  let latest = "";
+  for (const id of FACILITY_IDS) {
+    const c = getSlotConfig(id);
+    total += c.totalSlots;
+    used += c.usedSlots;
+    if (c.lastReloadTimestamp > latest) latest = c.lastReloadTimestamp;
   }
-  config.usedSlots += 1;
-  if (config.usedSlots >= config.totalSlots) {
-    config.status = "adjusting";
-  }
-  saveSlotConfig(config);
-  return true;
+  const remaining = Math.max(0, total - used);
+  return {
+    total,
+    used,
+    remaining,
+    status: remaining > 0 ? "available" : "adjusting",
+    lastReloadTimestamp: latest || new Date().toISOString(),
+  };
 }
 
-export function reloadSlots(totalSlots: number): void {
+export function consumeSlot(facilityId?: string): boolean {
+  const ids: FacilityId[] =
+    facilityId && facilityId !== "any"
+      ? [facilityId as FacilityId]
+      : [...FACILITY_IDS];
+
+  for (const id of ids) {
+    const config = getSlotConfig(id);
+    if (config.usedSlots < config.totalSlots) {
+      config.usedSlots += 1;
+      if (config.usedSlots >= config.totalSlots) config.status = "adjusting";
+      saveSlotConfig(config, id);
+      return true;
+    }
+  }
+  return false;
+}
+
+export function reloadSlots(totalSlots: number, facilityId: FacilityId): void {
   const config: SlotConfig = {
     totalSlots,
     usedSlots: 0,
@@ -96,7 +137,24 @@ export function reloadSlots(totalSlots: number): void {
     lastReloadTimestamp: new Date().toISOString(),
     status: "available",
   };
-  saveSlotConfig(config);
+  saveSlotConfig(config, facilityId);
+}
+
+// --- Facility Strengths ---
+
+export function getFacilityStrengths(facilityId: string): string[] {
+  const strengths = ["保証人不要・初期費用分割相談可・生活保護対応"];
+  if (
+    facilityId === "tsukamoto" ||
+    facilityId === "utajima" ||
+    facilityId === "any"
+  ) {
+    strengths.push("【塚本・歌島】JR塚本駅 徒歩圏内の好立地");
+  }
+  if (facilityId === "toyoshin" || facilityId === "any") {
+    strengths.push("【豊新】10階建・開放感のある住環境");
+  }
+  return strengths;
 }
 
 // --- Assessment Logs ---

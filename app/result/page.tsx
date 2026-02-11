@@ -10,8 +10,11 @@ import {
   addAssessmentLog,
   consumeSlot,
   getDiseaseNotes,
+  getFacilityStrengths,
+  FACILITY_LABELS,
   type AssessmentResult,
   type DiseaseNote,
+  type FacilityId,
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
@@ -27,6 +30,7 @@ function ResultContent() {
   const gender = searchParams.get("gender") || "";
   const budget = searchParams.get("budget") || "";
   const timing = searchParams.get("timing") || "";
+  const facility = searchParams.get("facility") || "any";
 
   useEffect(() => {
     if (!disease) return;
@@ -53,7 +57,7 @@ function ResultContent() {
     });
 
     if (assessmentResult.status === "acceptable") {
-      consumeSlot();
+      consumeSlot(facility);
     }
 
     setResult(assessmentResult);
@@ -205,22 +209,20 @@ function ResultContent() {
         </div>
       )}
 
-      {/* 物件の強み */}
+      {/* 物件の強み（拠点別） */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="mb-3 text-sm font-bold text-slate-800">物件の強み</h3>
+        <h3 className="mb-3 text-sm font-bold text-slate-800">
+          物件の強み
+          {facility !== "any" && FACILITY_LABELS[facility as FacilityId] &&
+            `（${FACILITY_LABELS[facility as FacilityId]}）`}
+        </h3>
         <ul className="space-y-1.5 text-sm text-slate-600">
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-primary">&#x2022;</span>
-            保証人不要・初期費用分割相談可・生活保護対応
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-primary">&#x2022;</span>
-            【塚本・歌島】JR塚本駅徒歩圏内の好立地
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-0.5 text-primary">&#x2022;</span>
-            【豊新】阪急上新庄駅利用・10階建の開放感
-          </li>
+          {getFacilityStrengths(facility).map((s, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="mt-0.5 text-primary">&#x2022;</span>
+              {s}
+            </li>
+          ))}
         </ul>
       </div>
 
@@ -238,6 +240,12 @@ function ResultContent() {
           <dd className="text-slate-700">{budget}</dd>
           <dt className="text-muted">希望時期</dt>
           <dd className="text-slate-700">{timing}</dd>
+          <dt className="text-muted">希望施設</dt>
+          <dd className="text-slate-700">
+            {facility === "any"
+              ? "どこでも可"
+              : FACILITY_LABELS[facility as FacilityId] || facility}
+          </dd>
         </dl>
       </div>
 
