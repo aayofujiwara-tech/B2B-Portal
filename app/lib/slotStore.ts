@@ -23,6 +23,7 @@ export interface AssessmentLog {
   timing: string;
   result: "acceptable" | "consultation";
   reason?: string;
+  triggerFlags?: string[];
 }
 
 export interface BookingLog {
@@ -157,32 +158,38 @@ export interface AssessmentResult {
   status: "acceptable" | "consultation";
   message: string;
   reasons: string[];
+  triggerFlags: string[];
 }
 
 export function runAssessment(input: AssessmentInput): AssessmentResult {
   const reasons: string[] = [];
+  const triggerFlags: string[] = [];
   let needsConsultation = false;
 
   // Disease check
   const highRiskDiseases = ["人工呼吸器", "透析"];
   if (highRiskDiseases.some((d) => input.disease.includes(d))) {
     needsConsultation = true;
+    triggerFlags.push("high_risk_disease");
     reasons.push("医療依存度が高い疾患のため、個別相談が必要です");
   }
 
   // ADL check
   if (input.adl === "全介助") {
+    triggerFlags.push("full_care_adl");
     reasons.push("ADL全介助の方は訪問看護体制の確認が必要です");
   }
 
   // Budget check
   if (input.budget === "〜8万円") {
     needsConsultation = true;
+    triggerFlags.push("low_budget");
     reasons.push("ご予算に応じたプランの個別調整が必要です");
   }
 
   // Timing check
   if (input.timing === "即日〜3日以内") {
+    triggerFlags.push("urgent_timing");
     reasons.push("緊急対応枠での調整となります");
   }
 
@@ -191,6 +198,7 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
       status: "consultation",
       message: "個別相談をお勧めいたします",
       reasons,
+      triggerFlags,
     };
   }
 
@@ -199,5 +207,6 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
     message: "受入可能です",
     reasons:
       reasons.length > 0 ? reasons : ["条件に合致する居室をご案内できます"],
+    triggerFlags,
   };
 }

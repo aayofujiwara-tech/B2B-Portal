@@ -213,7 +213,7 @@ export default function BookingPage() {
                     setSelectedTime("");
                     trackEvent("booking_start", "select_date", d.label);
                   }}
-                  className={`rounded-lg border px-2 py-2.5 text-xs font-medium transition ${
+                  className={`rounded-lg border px-2 py-3 text-xs font-medium transition ${
                     selectedDate === d.date
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -238,7 +238,7 @@ export default function BookingPage() {
                         setSelectedTime(time);
                         trackEvent("booking_start", "select_time", time);
                       }}
-                      className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
+                      className={`rounded-lg border px-2 py-3 text-sm font-medium transition ${
                         selectedTime === time
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-slate-200 text-slate-600 hover:border-slate-300"

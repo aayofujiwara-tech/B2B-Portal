@@ -125,7 +125,7 @@ export default function TopPage() {
                       setAdl(option);
                       trackEvent("assessment_start", "select_adl", option);
                     }}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
                       adl === option
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -151,7 +151,7 @@ export default function TopPage() {
                       setGender(option);
                       trackEvent("assessment_start", "select_gender", option);
                     }}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    className={`flex-1 rounded-lg border px-3 py-3 text-sm font-medium transition ${
                       gender === option
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -177,7 +177,7 @@ export default function TopPage() {
                       setBudget(option);
                       trackEvent("assessment_start", "select_budget", option);
                     }}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
                       budget === option
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -203,7 +203,7 @@ export default function TopPage() {
                       setTiming(option);
                       trackEvent("assessment_start", "select_timing", option);
                     }}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
                       timing === option
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-slate-200 text-slate-600 hover:border-slate-300"

@@ -8,7 +8,7 @@ export default function Footer() {
         </p>
         <p className="mt-1">
           お急ぎの方は直接お電話ください:{" "}
-          <span className="font-medium text-slate-700">03-XXXX-XXXX</span>{" "}
+          <a href="tel:03XXXXXXXX" className="font-medium text-slate-700 underline hover:text-primary">03-XXXX-XXXX</a>{" "}
           （担当：生田）
         </p>
       </div>

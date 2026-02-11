@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
@@ -17,6 +17,7 @@ function ResultContent() {
   const searchParams = useSearchParams();
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const processedRef = useRef(false);
 
   const disease = searchParams.get("disease") || "";
   const adl = searchParams.get("adl") || "";
@@ -26,6 +27,8 @@ function ResultContent() {
 
   useEffect(() => {
     if (!disease) return;
+    if (processedRef.current) return;
+    processedRef.current = true;
 
     const assessmentResult = runAssessment({
       disease,
@@ -43,6 +46,7 @@ function ResultContent() {
       timing,
       result: assessmentResult.status,
       reason: assessmentResult.reasons.join("; "),
+      triggerFlags: assessmentResult.triggerFlags,
     });
 
     if (assessmentResult.status === "acceptable") {
@@ -222,23 +226,55 @@ function ResultContent() {
       </div>
 
       {/* CTA */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Link
-          href="/booking"
-          onClick={() =>
-            trackEvent("booking_start", "click_booking_from_result")
-          }
-          className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
-        >
-          内覧予約に進む
-        </Link>
-        <Link
-          href="/"
-          className="flex flex-1 items-center justify-center rounded-xl border border-slate-300 py-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-        >
-          別の条件で再判定
-        </Link>
-      </div>
+      {isAcceptable ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/booking"
+            onClick={() =>
+              trackEvent("booking_start", "click_booking_from_result")
+            }
+            className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
+          >
+            内覧予約に進む
+          </Link>
+          <Link
+            href="/"
+            className="flex flex-1 items-center justify-center rounded-xl border border-slate-300 py-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            別の条件で再判定
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <a
+            href="tel:03XXXXXXXX"
+            onClick={() =>
+              trackEvent("consultation_call", "click_phone_from_result")
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-amber-700 active:scale-[0.98]"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            生田に電話で相談する
+          </a>
+          <Link
+            href="/booking"
+            onClick={() =>
+              trackEvent("booking_start", "click_booking_from_consultation")
+            }
+            className="flex flex-1 items-center justify-center rounded-xl border-2 border-primary py-3.5 text-sm font-bold text-primary transition hover:bg-primary/5 active:scale-[0.98]"
+          >
+            個別相談を予約する
+          </Link>
+          <Link
+            href="/"
+            className="flex flex-1 items-center justify-center rounded-xl border border-slate-300 py-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            別の条件で再判定
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
