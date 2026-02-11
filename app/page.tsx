@@ -77,13 +77,13 @@ export default function TopPage() {
         {/* Hero Section */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold text-slate-800">
-            受入可能性を事前確認
+            入居可能性を事前確認
           </h1>
           <p className="text-sm text-muted">
             24時間対応 ・ MSW様専用ポータル
           </p>
           <p className="mt-2 text-xs text-slate-500">
-            ※ 正式な受入可否は面談後に決定いたします
+            ※ ご入居には担当：生田との面談が必要です
           </p>
         </div>
 
@@ -99,14 +99,14 @@ export default function TopPage() {
               {savedContact.contactName}様（{savedContact.facilityName}）、お疲れ様です
             </p>
             <p className="mb-3 text-xs text-muted">
-              前回の情報を利用して、判定をスキップし直接予約できます
+              前回の情報でスピード予約できます。入力ステップをスキップして直接カレンダーへ進めます。
             </p>
             <Link
               href="/booking"
               onClick={() => trackEvent("booking_start", "click_repeater_shortcut")}
               className="flex items-center justify-center rounded-lg bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
             >
-              面談を予約する（リピート）
+              スピード面談予約へ進む
             </Link>
           </div>
         )}
@@ -279,7 +279,7 @@ export default function TopPage() {
                 判定中...
               </span>
             ) : (
-              "受入可能性を確認する"
+              "入居可能性を確認する"
             )}
           </button>
         </form>

@@ -159,15 +159,15 @@ function ResultContent() {
           className={`text-sm ${isAcceptable ? "text-emerald-600" : "text-amber-600"}`}
         >
           {isAcceptable
-            ? "優先面談枠（スピード面談）の確保が可能です"
-            : "体制を確認中です。まずは詳細ヒアリングの予約が可能です"}
+            ? "条件に概ね合致しています。スムーズな入居に向けて、担当：生田との最終確認面談を優先的に予約してください。"
+            : "詳細な調整が可能です。お電話または面談にて、最適な受入プランをご提案します。予約枠を確保してください。"}
         </p>
       </div>
 
       {/* 面談必須の注意書き */}
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
         <p className="text-xs text-blue-800">
-          ※ 本判定は入力内容に基づく事前確認です。正式な受入可否は面談後に決定いたします。
+          ※ ご入居には担当：生田との面談（対面/オンライン）が必要です。面談では居室の詳細やケア体制をご確認いただけます。
         </p>
       </div>
 
@@ -242,7 +242,7 @@ function ResultContent() {
             }
             className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
           >
-            優先面談を予約する
+            スピード面談を予約する
           </Link>
           <Link
             href="/"
@@ -263,16 +263,16 @@ function ResultContent() {
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
-            生田に電話で相談する
+            生田に今すぐ電話する
           </a>
           <Link
             href="/booking"
             onClick={() =>
               trackEvent("booking_start", "click_booking_from_consultation")
             }
-            className="flex flex-1 items-center justify-center rounded-xl border-2 border-primary py-3.5 text-sm font-bold text-primary transition hover:bg-primary/5 active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
           >
-            詳細ヒアリングを予約する
+            面談予約枠を確保する
           </Link>
           <Link
             href="/"

@@ -169,37 +169,38 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   const triggerFlags: string[] = [];
   let needsConsultation = false;
 
-  // Disease check
-  const highRiskDiseases = ["人工呼吸器", "透析"];
-  if (highRiskDiseases.some((d) => input.disease.includes(d))) {
+  // Disease check — only ventilator requires consultation
+  if (input.disease.includes("人工呼吸器")) {
     needsConsultation = true;
     triggerFlags.push("high_risk_disease");
-    reasons.push("医療依存度が高い疾患のため、個別相談が必要です");
+    reasons.push("人工呼吸器管理のため、受入体制の事前確認が必要です");
+  } else if (input.disease.includes("透析")) {
+    triggerFlags.push("dialysis");
+    reasons.push("透析スケジュールに合わせた送迎プランをご提案します");
   }
 
-  // ADL check
+  // ADL check — positive framing, no longer a blocker
   if (input.adl === "全介助") {
     triggerFlags.push("full_care_adl");
-    reasons.push("ADL全介助の方は訪問看護体制の確認が必要です");
+    reasons.push("24時間訪問看護体制でサポートいたします");
   }
 
-  // Budget check
+  // Budget check — relaxed: offer plan adjustment instead of blocking
   if (input.budget === "〜8万円") {
-    needsConsultation = true;
     triggerFlags.push("low_budget");
-    reasons.push("ご予算に応じたプランの個別調整が必要です");
+    reasons.push("ご予算に応じた最適プランを面談時にご案内します");
   }
 
-  // Timing check
+  // Timing check — positive urgency
   if (input.timing === "即日〜3日以内") {
     triggerFlags.push("urgent_timing");
-    reasons.push("緊急対応枠での調整となります");
+    reasons.push("スピード面談枠で最短対応いたします");
   }
 
   if (needsConsultation) {
     return {
       status: "consultation",
-      message: "受入可能性：要相談",
+      message: "入居可能性：要相談",
       reasons,
       triggerFlags,
     };
@@ -207,9 +208,11 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
 
   return {
     status: "acceptable",
-    message: "受入可能性：高",
+    message: "入居可能性：高",
     reasons:
-      reasons.length > 0 ? reasons : ["条件に合致する居室をご案内できます"],
+      reasons.length > 0
+        ? reasons
+        : ["ご入居条件に合致しています。優先面談枠をご利用いただけます"],
     triggerFlags,
   };
 }
