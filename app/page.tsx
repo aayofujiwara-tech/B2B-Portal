@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
+import { type SavedContact, getSavedContact } from "@/app/booking/page";
 
 const DISEASE_OPTIONS = [
   "脳血管疾患（脳梗塞・脳出血）",
@@ -39,6 +41,11 @@ export default function TopPage() {
   const [budget, setBudget] = useState("");
   const [timing, setTiming] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
+
+  useEffect(() => {
+    setSavedContact(getSavedContact());
+  }, []);
 
   const isFormValid = disease && adl && gender && budget && timing;
 
@@ -84,6 +91,25 @@ export default function TopPage() {
         <div className="mb-8">
           <SlotProgressBar />
         </div>
+
+        {/* Repeater Shortcut */}
+        {savedContact && (
+          <div className="mb-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 shadow-sm">
+            <p className="mb-1 text-sm font-bold text-slate-800">
+              {savedContact.contactName}様（{savedContact.facilityName}）、お疲れ様です
+            </p>
+            <p className="mb-3 text-xs text-muted">
+              前回の情報を利用して、判定をスキップし直接予約できます
+            </p>
+            <Link
+              href="/booking"
+              onClick={() => trackEvent("booking_start", "click_repeater_shortcut")}
+              className="flex items-center justify-center rounded-lg bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+            >
+              面談を予約する（リピート）
+            </Link>
+          </div>
+        )}
 
         {/* Assessment Form */}
         <form onSubmit={handleSubmit} className="space-y-6">

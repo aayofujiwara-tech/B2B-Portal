@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import { addBookingLog } from "@/app/lib/slotStore";
@@ -27,6 +27,27 @@ const AVAILABLE_DATES = (() => {
   return dates;
 })();
 
+const CONTACT_KEY = "b2b_portal_contact";
+
+export interface SavedContact {
+  facilityName: string;
+  contactName: string;
+  phone: string;
+  email: string;
+}
+
+export function getSavedContact(): SavedContact | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const s = localStorage.getItem(CONTACT_KEY);
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
+}
+
+function saveContact(c: SavedContact): void {
+  localStorage.setItem(CONTACT_KEY, JSON.stringify(c));
+}
+
 export default function BookingPage() {
   const [facilityName, setFacilityName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -37,6 +58,16 @@ export default function BookingPage() {
   const [notes, setNotes] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const saved = getSavedContact();
+    if (saved) {
+      setFacilityName(saved.facilityName);
+      setContactName(saved.contactName);
+      setPhone(saved.phone);
+      setEmail(saved.email);
+    }
+  }, []);
 
   const selectedDateObj = AVAILABLE_DATES.find((d) => d.date === selectedDate);
 
@@ -59,6 +90,8 @@ export default function BookingPage() {
       preferredTime: selectedTime,
       notes,
     });
+
+    saveContact({ facilityName, contactName, phone, email });
 
     setTimeout(() => {
       setIsSubmitted(true);
