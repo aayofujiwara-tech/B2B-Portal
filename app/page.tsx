@@ -70,10 +70,13 @@ export default function TopPage() {
         {/* Hero Section */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold text-slate-800">
-            受入可否を即時判定
+            受入可能性を事前確認
           </h1>
           <p className="text-sm text-muted">
             24時間対応 ・ MSW様専用ポータル
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            ※ 正式な受入可否は面談後に決定いたします
           </p>
         </div>
 
@@ -86,7 +89,7 @@ export default function TopPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-5 text-base font-bold text-slate-800">
-              簡易判定フォーム
+              受入確認フォーム
             </h2>
 
             {/* Disease */}
@@ -250,7 +253,7 @@ export default function TopPage() {
                 判定中...
               </span>
             ) : (
-              "10秒で判定する"
+              "受入可能性を確認する"
             )}
           </button>
         </form>

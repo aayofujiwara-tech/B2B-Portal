@@ -104,7 +104,7 @@ export default function BookingPage() {
                   <dd className="font-medium">{contactName}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-muted">内覧日時</dt>
+                  <dt className="text-muted">面談日時</dt>
                   <dd className="font-medium">
                     {selectedDateObj?.label} {selectedTime}
                   </dd>
@@ -130,7 +130,7 @@ export default function BookingPage() {
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="mb-2 text-2xl font-bold text-slate-800">内覧予約</h1>
+          <h1 className="mb-2 text-2xl font-bold text-slate-800">面談予約</h1>
           <p className="text-sm text-muted">
             担当：生田 ｜ ご都合の良い日時をお選びください
           </p>
@@ -200,7 +200,7 @@ export default function BookingPage() {
           {/* Calendar Selection */}
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-slate-800">
-              内覧希望日
+              面談希望日
             </h2>
 
             <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -300,7 +300,7 @@ export default function BookingPage() {
                 送信中...
               </span>
             ) : (
-              "内覧予約を確定する"
+              "面談予約を確定する"
             )}
           </button>
         </form>

@@ -159,8 +159,15 @@ function ResultContent() {
           className={`text-sm ${isAcceptable ? "text-emerald-600" : "text-amber-600"}`}
         >
           {isAcceptable
-            ? "条件に合う居室をご案内できます"
-            : "担当者が個別にご対応いたします"}
+            ? "優先面談枠（スピード面談）の確保が可能です"
+            : "体制を確認中です。まずは詳細ヒアリングの予約が可能です"}
+        </p>
+      </div>
+
+      {/* 面談必須の注意書き */}
+      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+        <p className="text-xs text-blue-800">
+          ※ 本判定は入力内容に基づく事前確認です。正式な受入可否は面談後に決定いたします。
         </p>
       </div>
 
@@ -235,7 +242,7 @@ function ResultContent() {
             }
             className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
           >
-            内覧予約に進む
+            優先面談を予約する
           </Link>
           <Link
             href="/"
@@ -265,7 +272,7 @@ function ResultContent() {
             }
             className="flex flex-1 items-center justify-center rounded-xl border-2 border-primary py-3.5 text-sm font-bold text-primary transition hover:bg-primary/5 active:scale-[0.98]"
           >
-            個別相談を予約する
+            詳細ヒアリングを予約する
           </Link>
           <Link
             href="/"

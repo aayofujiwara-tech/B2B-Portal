@@ -14,7 +14,51 @@ import {
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
+const ADMIN_PASSWORD = "ikuta2024";
+
+function AdminAuth({ onAuth }: { onAuth: () => void }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pw === ADMIN_PASSWORD) {
+      sessionStorage.setItem("b2b_admin_auth", "1");
+      onAuth();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4">
+        <div className="w-full rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="mb-4 text-center text-lg font-bold text-slate-800">管理画面ログイン</h1>
+          <form onSubmit={handleSubmit}>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">パスワード</label>
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => { setPw(e.target.value); setError(false); }}
+              className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
+            {error && <p className="mb-3 text-xs text-red-600">パスワードが正しくありません</p>}
+            <button type="submit" className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-dark">
+              ログイン
+            </button>
+          </form>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
   const [slotConfig, setSlotConfig] = useState<SlotConfig | null>(null);
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);
@@ -30,8 +74,18 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (sessionStorage.getItem("b2b_admin_auth") === "1") {
+      setAuthed(true);
+    }
   }, []);
+
+  useEffect(() => {
+    if (authed) loadData();
+  }, [authed]);
+
+  if (!authed) {
+    return <AdminAuth onAuth={() => setAuthed(true)} />;
+  }
 
   const handleReload = () => {
     reloadSlots(newTotal);
@@ -60,13 +114,13 @@ export default function AdminPage() {
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
         <div className="mb-8">
           <h1 className="mb-1 text-2xl font-bold text-slate-800">管理画面</h1>
-          <p className="text-sm text-muted">受入枠の管理と判定ログの確認</p>
+          <p className="text-sm text-muted">優先面談枠の管理と判定ログの確認</p>
         </div>
 
         {/* Tabs */}
         <div className="mb-6 flex gap-1 rounded-lg bg-slate-100 p-1">
           {[
-            { key: "slots" as const, label: "受入枠管理" },
+            { key: "slots" as const, label: "面談枠管理" },
             { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）` },
             { key: "bookings" as const, label: `予約ログ（${bookingLogs.length}）` },
           ].map((tab) => (

@@ -10,6 +10,7 @@ export interface SlotConfig {
   totalSlots: number;
   usedSlots: number;
   lastReloadDate: string;
+  lastReloadTimestamp: string;
   status: "available" | "adjusting";
 }
 
@@ -46,6 +47,7 @@ const DEFAULT_CONFIG: SlotConfig = {
   totalSlots: 5,
   usedSlots: 2,
   lastReloadDate: new Date().toISOString().split("T")[0],
+  lastReloadTimestamp: new Date().toISOString(),
   status: "available",
 };
 
@@ -91,6 +93,7 @@ export function reloadSlots(totalSlots: number): void {
     totalSlots,
     usedSlots: 0,
     lastReloadDate: new Date().toISOString().split("T")[0],
+    lastReloadTimestamp: new Date().toISOString(),
     status: "available",
   };
   saveSlotConfig(config);
@@ -196,7 +199,7 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   if (needsConsultation) {
     return {
       status: "consultation",
-      message: "個別相談をお勧めいたします",
+      message: "受入可能性：要相談",
       reasons,
       triggerFlags,
     };
@@ -204,7 +207,7 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
 
   return {
     status: "acceptable",
-    message: "受入可能です",
+    message: "受入可能性：高",
     reasons:
       reasons.length > 0 ? reasons : ["条件に合致する居室をご案内できます"],
     triggerFlags,

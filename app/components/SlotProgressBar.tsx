@@ -4,17 +4,33 @@ import { useEffect, useState } from "react";
 import { getSlotConfig, type SlotConfig } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
+function getElapsedLabel(isoTimestamp: string): string {
+  const diff = Date.now() - new Date(isoTimestamp).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "たった今";
+  if (min < 60) return `${min}分前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}時間前`;
+  return `${Math.floor(hr / 24)}日前`;
+}
+
 export default function SlotProgressBar() {
   const [config, setConfig] = useState<SlotConfig | null>(null);
+  const [elapsed, setElapsed] = useState("");
 
   useEffect(() => {
     const c = getSlotConfig();
     setConfig(c);
+    setElapsed(getElapsedLabel(c.lastReloadTimestamp || c.lastReloadDate));
     trackEvent(
       "slot_view",
       "view_progress_bar",
       `${c.totalSlots - c.usedSlots}/${c.totalSlots}`
     );
+    const timer = setInterval(() => {
+      setElapsed(getElapsedLabel(c.lastReloadTimestamp || c.lastReloadDate));
+    }, 60000);
+    return () => clearInterval(timer);
   }, []);
 
   if (!config) {
@@ -55,7 +71,7 @@ export default function SlotProgressBar() {
             className={`inline-block h-2.5 w-2.5 rounded-full ${getIndicatorColor()}`}
           />
           <h3 className="text-sm font-bold text-slate-800">
-            今週の緊急受入枠
+            今週の優先面談枠
           </h3>
         </div>
         {isAdjusting ? (
@@ -95,11 +111,16 @@ export default function SlotProgressBar() {
         </span>
       </div>
 
-      {ratio >= 0.6 && !isAdjusting && (
-        <p className="mt-2 text-xs font-medium text-amber-600">
-          ※ 受入枠が残りわずかとなっております。
+      <div className="mt-2 flex items-center justify-between">
+        {ratio >= 0.6 && !isAdjusting ? (
+          <p className="text-xs font-medium text-amber-600">
+            ※ 優先面談枠が残りわずかです
+          </p>
+        ) : <span />}
+        <p className="text-xs text-muted">
+          最終更新：{elapsed}
         </p>
-      )}
+      </div>
     </div>
   );
 }
