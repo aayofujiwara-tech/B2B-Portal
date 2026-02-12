@@ -156,10 +156,10 @@ export default function BookingPage() {
               </svg>
             </div>
             <h2 className="mb-2 text-xl font-bold text-emerald-800">
-              ご予約を承りました
+              面談の受付を完了しました
             </h2>
             <p className="mb-4 text-sm text-emerald-600">
-              担当の生田より確認のご連絡をいたします
+              現在は「仮受付」の状態です。担当の生田より、本日または翌営業日中に、メールまたはお電話にて日程確定のご連絡を差し上げます。今しばらくお待ちください。
             </p>
             <div className="mb-6 rounded-lg bg-white p-4 text-left text-sm">
               <dl className="space-y-2">
@@ -204,7 +204,7 @@ export default function BookingPage() {
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="mb-2 text-2xl font-bold text-slate-800">面談予約</h1>
+          <h1 className="mb-2 text-2xl font-bold text-slate-800">面談申込</h1>
           <p className="text-sm text-muted">
             担当：生田 ｜ ご都合の良い日時をお選びください
           </p>
@@ -391,7 +391,7 @@ export default function BookingPage() {
                 送信中...
               </span>
             ) : (
-              "面談予約を確定する"
+              "上記日程で面談を申し込む"
             )}
           </button>
         </form>

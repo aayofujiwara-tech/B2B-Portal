@@ -270,13 +270,14 @@ export interface BookingNotificationPayload {
   to: string[];
   subject: string;
   body: {
-    contactName: string;
     facilityName: string;
+    contactName: string;
     phone: string;
     email: string;
     preferredDates: { date: string; timeSlot: string }[];
     notes: string;
     timestamp: string;
+    urgencyMessage: string;
   };
 }
 
@@ -293,10 +294,10 @@ export function mockEmailService(
 
   const payload: BookingNotificationPayload = {
     to: recipients,
-    subject: `【面談予約】${booking.facilityName} - ${booking.contactName}様`,
+    subject: `【要確認】B2Bポータルより面談受付が入りました（施設名：${booking.facilityName}）`,
     body: {
-      contactName: booking.contactName,
       facilityName: booking.facilityName,
+      contactName: booking.contactName,
       phone: booking.phone,
       email: booking.email,
       preferredDates: booking.allDateSlots || [
@@ -304,6 +305,8 @@ export function mockEmailService(
       ],
       notes: booking.notes,
       timestamp: new Date().toISOString(),
+      urgencyMessage:
+        "至急、上記連絡先へ日程確定の連絡をお願いします。",
     },
   };
 

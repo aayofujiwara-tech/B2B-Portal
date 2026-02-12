@@ -176,8 +176,8 @@ function ResultContent() {
           className={`text-sm ${isAcceptable ? "text-emerald-600" : "text-amber-600"}`}
         >
           {isAcceptable
-            ? "条件に概ね合致しています。スムーズな入居に向けて、担当：生田との最終確認面談を優先的に予約してください。"
-            : "詳細な調整が可能です。お電話または面談にて、最適な受入プランをご提案します。予約枠を確保してください。"}
+            ? "条件に概ね合致しています。スムーズな入居に向けて、担当：生田との面談をお申し込みください。"
+            : "詳細な調整が可能です。お電話または面談にて、最適な受入プランをご提案します。面談をお申し込みください。"}
         </p>
       </div>
 
@@ -275,7 +275,7 @@ function ResultContent() {
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            {FACILITY_LABELS[facility as FacilityId]}のチラシをダウンロード
+            {FACILITY_LABELS[facility as FacilityId]}のチラシをダウンロード(PDF)
           </a>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -306,7 +306,7 @@ function ResultContent() {
             }
             className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
           >
-            スピード面談を予約する
+            スピード面談を申し込む
           </Link>
           <Link
             href="/"
@@ -336,7 +336,7 @@ function ResultContent() {
             }
             className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
           >
-            面談予約枠を確保する
+            面談を申し込む
           </Link>
           <Link
             href="/"

@@ -139,7 +139,7 @@ export default function AdminPage() {
           {[
             { key: "slots" as const, label: "面談枠管理" },
             { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）` },
-            { key: "bookings" as const, label: `予約ログ（${bookingLogs.length}）` },
+            { key: "bookings" as const, label: `受付ログ（${bookingLogs.length}）` },
             { key: "notifications" as const, label: "通知設定" },
           ].map((tab) => (
             <button
@@ -310,7 +310,7 @@ export default function AdminPage() {
           <div className="animate-fade-in">
             {bookingLogs.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-                <p className="text-muted">予約ログはまだありません</p>
+                <p className="text-muted">受付ログはまだありません</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -368,7 +368,7 @@ export default function AdminPage() {
                 通知先メールアドレス設定
               </h2>
               <p className="mb-5 text-xs text-muted">
-                予約発生時にここで登録されたアドレス全てへ通知メールが送信されます（GAS連携準備）
+                面談受付時にここで登録されたアドレス全てへ通知メールが送信されます（GAS連携準備）
               </p>
 
               {/* Add email form */}
