@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "居室サブリース | MSW向け 受入判定ポータル",
+  title: "ええすまい | 紹介業者、MSW向けポータルサイト",
   description:
-    "病院MSW向け：24時間いつでも即決判定・内覧予約ができるB2Bポータル",
+    "紹介業者・MSW向け：24時間いつでも即決判定・面談予約ができるええすまいポータル",
 };
 
 export default function RootLayout({

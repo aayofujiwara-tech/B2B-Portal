@@ -202,7 +202,7 @@ function ResultContent() {
       {isFacilityFull && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
           <p className="text-sm font-medium leading-relaxed text-red-700 sm:text-xs sm:leading-relaxed">
-            ※現在、該当施設は満室となっております。日程調整のご連絡の際に、最短での空き予定や近隣施設（塚本・歌島等）へのご案内を優先的にさせていただきます。
+            ※現在、該当施設は満室となっております。空き次第のご案内、または近隣の「ええすまい」拠点へのご案内を優先させていただきます。
           </p>
         </div>
       )}

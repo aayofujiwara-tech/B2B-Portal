@@ -122,7 +122,7 @@ export default function FlyerPage() {
             href="/"
             className="text-sm font-medium text-primary hover:underline"
           >
-            受入判定に戻る
+            入居判定に戻る
           </Link>
         </div>
       </main>

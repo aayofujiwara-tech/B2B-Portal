@@ -368,7 +368,7 @@ export default function AdminPage() {
                 通知先メールアドレス設定
               </h2>
               <p className="mb-5 text-xs text-muted">
-                面談受付時にここで登録されたアドレス全てへ通知メールが送信されます（GAS連携準備）
+                面談受付時にここで登録されたアドレス全てへ通知メールが送信されます
               </p>
 
               {/* Add email form */}

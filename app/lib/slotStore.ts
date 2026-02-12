@@ -306,7 +306,7 @@ export async function sendBookingNotification(
 
   const payload: BookingNotificationPayload = {
     to: recipients,
-    subject: `【要確認】B2Bポータルより面談受付が入りました（施設名：${booking.facilityName}）`,
+    subject: `【要確認】ええすまいポータルより面談受付が入りました（施設名：${booking.facilityName}）`,
     body: {
       facilityName: booking.facilityName,
       contactName: booking.contactName,

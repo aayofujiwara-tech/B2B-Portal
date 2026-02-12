@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "受入判定" },
-  { href: "/booking", label: "内覧予約" },
+  { href: "/", label: "入居判定" },
+  { href: "/booking", label: "面談予約" },
   { href: "/admin", label: "管理画面" },
 ];
 
@@ -16,15 +16,15 @@ export default function Header() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">
-            居
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white">
+            ee
           </div>
           <div>
             <div className="text-sm font-bold leading-tight text-slate-800">
-              居室サブリース
+              ええすまい
             </div>
             <div className="hidden text-[10px] leading-tight text-muted sm:block">
-              MSW向け受入判定ポータル
+              紹介業者、MSW向けポータル
             </div>
           </div>
         </Link>

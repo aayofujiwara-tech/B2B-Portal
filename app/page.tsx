@@ -138,7 +138,7 @@ export default function TopPage() {
             入居可能性を事前確認
           </h1>
           <p className="text-sm text-muted">
-            24時間対応 ・ MSW様専用ポータル
+            24時間対応 ・ 紹介業者、MSW向けポータル
           </p>
           <p className="mt-2 text-xs text-slate-500">
             ※ ご入居には担当：生田との面談が必要です
@@ -259,7 +259,7 @@ export default function TopPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-base font-bold text-slate-800">
-              受入確認フォーム
+              入居判定フォーム
             </h2>
 
             {/* Disease */}

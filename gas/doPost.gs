@@ -1,5 +1,5 @@
 /**
- * B2Bポータル 面談受付通知 — Google Apps Script
+ * ええすまいポータル 面談受付通知 — Google Apps Script
  *
  * 【使い方】
  * 1. Google スプレッドシートを新規作成し、シート名を「受付ログ」にする
@@ -63,7 +63,7 @@ function doPost(e) {
     // --- 2. メール送信 ---
     var recipients = json.to || [];
     if (recipients.length > 0) {
-      var subject = json.subject || "【要確認】B2Bポータル面談受付";
+      var subject = json.subject || "【要確認】ええすまいポータル面談受付";
       var emailBody = buildEmailBody(body, dates, assessment);
 
       recipients.forEach(function (addr) {
@@ -92,7 +92,7 @@ function buildEmailBody(body, dates, assessment) {
   var lines = [];
 
   lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  lines.push("  B2Bポータルより面談受付が入りました");
+  lines.push("  ええすまいポータルより面談受付が入りました");
   lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   lines.push("");
 
