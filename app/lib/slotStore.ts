@@ -59,11 +59,11 @@ function slotKey(id: FacilityId): string {
 }
 
 const DEFAULT_CONFIG: SlotConfig = {
-  totalSlots: 5,
-  usedSlots: 2,
+  totalSlots: 0,
+  usedSlots: 0,
   lastReloadDate: new Date().toISOString().split("T")[0],
   lastReloadTimestamp: new Date().toISOString(),
-  status: "available",
+  status: "adjusting",
 };
 
 // --- Slot Management (per-facility) ---

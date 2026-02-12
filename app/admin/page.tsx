@@ -68,9 +68,9 @@ export default function AdminPage() {
     Record<FacilityId, SlotConfig> | null
   >(null);
   const [newTotals, setNewTotals] = useState<Record<FacilityId, number>>({
-    tsukamoto: 5,
-    utajima: 5,
-    toyoshin: 5,
+    tsukamoto: 0,
+    utajima: 0,
+    toyoshin: 0,
   });
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);
@@ -80,6 +80,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
     "slots" | "assessments" | "bookings" | "notifications"
   >("slots");
+  const [toastMessage, setToastMessage] = useState("");
 
   const loadData = () => {
     const slots = {} as Record<FacilityId, SlotConfig>;
@@ -110,6 +111,8 @@ export default function AdminPage() {
     reloadSlots(newTotals[facilityId], facilityId);
     trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
     loadData();
+    setToastMessage(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
+    setTimeout(() => setToastMessage(""), 3000);
   };
 
   if (!facilitySlots) {
@@ -129,6 +132,18 @@ export default function AdminPage() {
       <Header />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+        {/* Toast notification */}
+        {toastMessage && (
+          <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 animate-fade-in rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-lg">
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              {toastMessage}
+            </p>
+          </div>
+        )}
+
         <div className="mb-8">
           <h1 className="mb-1 text-2xl font-bold text-slate-800">管理画面</h1>
           <p className="text-sm text-muted">優先面談枠の管理と判定ログの確認</p>
