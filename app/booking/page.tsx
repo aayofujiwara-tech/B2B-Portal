@@ -6,26 +6,28 @@ import Footer from "@/app/components/Footer";
 import { addBookingLog } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
-// Mock calendar data for 生田 (Ikuta)
-const AVAILABLE_DATES = (() => {
-  const dates: { date: string; label: string; slots: string[] }[] = [];
-  const today = new Date();
-  for (let i = 1; i <= 14; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    const dayOfWeek = d.getDay();
-    if (dayOfWeek === 0) continue; // Skip Sunday
-    const dateStr = d.toISOString().split("T")[0];
-    const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
-    const label = `${d.getMonth() + 1}/${d.getDate()}（${dayNames[dayOfWeek]}）`;
-    const slots =
-      dayOfWeek === 6
-        ? ["10:00", "11:00"]
-        : ["10:00", "11:00", "13:00", "14:00", "15:00", "16:00"];
-    dates.push({ date: dateStr, label, slots });
-  }
-  return dates;
-})();
+const TIME_SLOT_OPTIONS = [
+  { value: "", label: "指定なし" },
+  { value: "午前（9:00-12:00）", label: "午前（9:00-12:00）" },
+  { value: "午後（13:00-18:00）", label: "午後（13:00-18:00）" },
+];
+
+interface DateSlot {
+  date: string;
+  timeSlot: string;
+}
+
+function getMinDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+function getMaxDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().split("T")[0];
+}
 
 const CONTACT_KEY = "b2b_portal_contact";
 
@@ -53,8 +55,9 @@ export default function BookingPage() {
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
+  const [dateSlots, setDateSlots] = useState<DateSlot[]>([
+    { date: "", timeSlot: "" },
+  ]);
   const [notes, setNotes] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,26 +72,47 @@ export default function BookingPage() {
     }
   }, []);
 
-  const selectedDateObj = AVAILABLE_DATES.find((d) => d.date === selectedDate);
+  const updateDateSlot = (index: number, field: keyof DateSlot, value: string) => {
+    setDateSlots((prev) =>
+      prev.map((ds, i) => (i === index ? { ...ds, [field]: value } : ds))
+    );
+  };
+
+  const addDateSlot = () => {
+    if (dateSlots.length < 3) {
+      setDateSlots((prev) => [...prev, { date: "", timeSlot: "" }]);
+    }
+  };
+
+  const removeDateSlot = (index: number) => {
+    if (dateSlots.length > 1) {
+      setDateSlots((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
 
   const isFormValid =
-    facilityName && contactName && phone && selectedDate && selectedTime;
+    facilityName && contactName && phone && dateSlots[0].date;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
     setIsSubmitting(true);
-    trackEvent("booking_submit", "submit_booking", selectedDate);
+    trackEvent("booking_submit", "submit_booking", dateSlots[0].date);
+
+    const allDates = dateSlots
+      .filter((ds) => ds.date)
+      .map((ds) => `${ds.date}${ds.timeSlot ? ` ${ds.timeSlot}` : ""}`)
+      .join(" / ");
 
     addBookingLog({
       facilityName,
       contactName,
       phone,
       email,
-      preferredDate: selectedDate,
-      preferredTime: selectedTime,
-      notes,
+      preferredDate: dateSlots[0].date,
+      preferredTime: dateSlots[0].timeSlot || "指定なし",
+      notes: dateSlots.length > 1 ? `希望日程: ${allDates}\n${notes}` : notes,
     });
 
     saveContact({ facilityName, contactName, phone, email });
@@ -136,12 +160,18 @@ export default function BookingPage() {
                   <dt className="text-muted">ご担当者</dt>
                   <dd className="font-medium">{contactName}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted">面談日時</dt>
-                  <dd className="font-medium">
-                    {selectedDateObj?.label} {selectedTime}
-                  </dd>
-                </div>
+                {dateSlots.filter((ds) => ds.date).map((ds, i) => (
+                  <div key={i} className="flex justify-between">
+                    <dt className="text-muted">
+                      {dateSlots.filter((d) => d.date).length > 1
+                        ? `第${i + 1}希望`
+                        : "面談日時"}
+                    </dt>
+                    <dd className="font-medium">
+                      {ds.date} {ds.timeSlot || "指定なし"}
+                    </dd>
+                  </div>
+                ))}
               </dl>
             </div>
             <a
@@ -230,58 +260,75 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* Calendar Selection */}
+          {/* Date & Time Preferences (max 3) */}
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-slate-800">
-              面談希望日
+              面談希望日（最大3つ）
             </h2>
 
-            <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {AVAILABLE_DATES.map((d) => (
-                <button
-                  key={d.date}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDate(d.date);
-                    setSelectedTime("");
-                    trackEvent("booking_start", "select_date", d.label);
-                  }}
-                  className={`rounded-lg border px-2 py-3 text-xs font-medium transition ${
-                    selectedDate === d.date
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  {d.label}
-                </button>
+            <div className="space-y-3">
+              {dateSlots.map((ds, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      {dateSlots.length > 1 ? `第${i + 1}希望` : "希望日"}{" "}
+                      {i === 0 && <span className="text-danger">*</span>}
+                    </label>
+                    <input
+                      type="date"
+                      value={ds.date}
+                      min={getMinDate()}
+                      max={getMaxDate()}
+                      onChange={(e) => {
+                        updateDateSlot(i, "date", e.target.value);
+                        trackEvent("booking_start", "select_date", e.target.value);
+                      }}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                      時間帯
+                    </label>
+                    <select
+                      value={ds.timeSlot}
+                      onChange={(e) => updateDateSlot(i, "timeSlot", e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    >
+                      {TIME_SLOT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {dateSlots.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDateSlot(i)}
+                      className="mb-0.5 rounded-lg border border-slate-200 p-2.5 text-slate-400 transition hover:border-red-300 hover:text-red-500"
+                      aria-label="削除"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
 
-            {selectedDateObj && (
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  時間帯を選択
-                </label>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                  {selectedDateObj.slots.map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTime(time);
-                        trackEvent("booking_start", "select_time", time);
-                      }}
-                      className={`rounded-lg border px-2 py-3 text-sm font-medium transition ${
-                        selectedTime === time
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-slate-200 text-slate-600 hover:border-slate-300"
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {dateSlots.length < 3 && (
+              <button
+                type="button"
+                onClick={addDateSlot}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                候補日を追加
+              </button>
             )}
           </div>
 
