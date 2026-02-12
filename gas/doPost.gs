@@ -6,35 +6,45 @@
  * 2. 「拡張機能 > Apps Script」を開き、このコードを貼り付ける
  * 3. 「デプロイ > 新しいデプロイ」→ 種類「ウェブアプリ」→ アクセス「全員」で公開
  * 4. 生成されたURLを .env.local の GAS_WEBHOOK_URL に設定する
+ *
+ * 【シート構成】
+ * - 「受付ログ」: 面談予約の受付記録
+ * - 「判定ログ」: 全ての判定結果を記録（申込に至らなかったケースも含む）
  */
 
 function doPost(e) {
   try {
     var json = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // --- 判定ログ専用リクエスト ---
+    if (json.type === "assessment") {
+      recordAssessmentLog(ss, json.body);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- 受付ログ（従来の処理） ---
     var body = json.body;
 
-    // --- 1. スプレッドシートへ記録 ---
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("受付ログ");
-    if (!sheet) {
-      sheet = ss.insertSheet("受付ログ");
-      sheet.appendRow([
-        "受付日時",
-        "施設名",
-        "予約者名",
-        "電話番号",
-        "メール",
-        "第1希望",
-        "第2希望",
-        "第3希望",
-        "確度判定",
-        "疾患",
-        "ADL",
-        "判定補足",
-        "備考",
-        "リピーター",
-      ]);
-    }
+    // 1. 受付ログシートへ記録
+    var sheet = getOrCreateSheet(ss, "受付ログ", [
+      "受付日時",
+      "施設名",
+      "予約者名",
+      "電話番号",
+      "メール",
+      "第1希望",
+      "第2希望",
+      "第3希望",
+      "確度判定",
+      "疾患",
+      "ADL",
+      "判定補足",
+      "備考",
+      "リピーター",
+    ]);
 
     var dates = body.preferredDates || [];
     var d1 = dates[0] ? dates[0].date + " " + (dates[0].timeSlot || "指定なし") : "";
@@ -60,7 +70,23 @@ function doPost(e) {
       body.isRepeater ? "はい" : "いいえ",
     ]);
 
-    // --- 2. メール送信 ---
+    // 2. 判定ログシートへも記録（受付に紐づく判定データ）
+    if (assessment && assessment.status) {
+      recordAssessmentLog(ss, {
+        facilityName: body.facilityName || "",
+        result: assessment.status || "",
+        disease: assessment.disease || "",
+        adl: assessment.adl || "",
+        dementiaLevel: assessment.dementiaLevel || "",
+        welfare: assessment.welfare || "",
+        budget: assessment.budget || "",
+        reason: assessment.reason || "",
+        isRepeater: body.isRepeater ? "はい" : "いいえ",
+        source: "booking",
+      });
+    }
+
+    // 3. メール送信
     var recipients = json.to || [];
     if (recipients.length > 0) {
       var subject = json.subject || "【要確認】ええすまいポータル面談受付";
@@ -83,6 +109,52 @@ function doPost(e) {
       JSON.stringify({ ok: false, error: err.message })
     ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * シートを取得、存在しなければヘッダー付きで新規作成
+ */
+function getOrCreateSheet(ss, name, headers) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(headers);
+  }
+  return sheet;
+}
+
+/**
+ * 判定ログシートへ1行追記する
+ * 申込に至らなかったケースも含め市場ニーズを可視化するために使用
+ */
+function recordAssessmentLog(ss, data) {
+  var sheet = getOrCreateSheet(ss, "判定ログ", [
+    "記録日時",
+    "施設名",
+    "判定結果",
+    "疾患名",
+    "ADLレベル",
+    "認知症レベル",
+    "生活保護",
+    "予算",
+    "判定補足",
+    "リピーター",
+    "記録元",
+  ]);
+
+  sheet.appendRow([
+    new Date(),
+    data.facilityName || "",
+    data.result || "",
+    data.disease || "",
+    data.adl || "",
+    data.dementiaLevel || "",
+    data.welfare || "",
+    data.budget || "",
+    data.reason || "",
+    data.isRepeater || "",
+    data.source || "direct",
+  ]);
 }
 
 /**

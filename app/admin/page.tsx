@@ -242,6 +242,77 @@ export default function AdminPage() {
     });
   };
 
+  const handleCsvBackup = () => {
+    const BOM = "\uFEFF";
+    const now = new Date();
+    const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+
+    const assessmentHeader = [
+      "種別", "ID", "タイムスタンプ", "判定結果", "疾患", "ADL",
+      "認知症レベル", "性別", "予算", "時期", "理由",
+      "トリガーフラグ", "対応済", "対応日時",
+    ];
+    const bookingHeader = [
+      "種別", "ID", "タイムスタンプ", "施設名", "担当者名", "電話番号",
+      "メール", "希望日", "希望時間", "備考", "対応済", "対応日時",
+    ];
+
+    const esc = (v: string | undefined | boolean) => {
+      if (v === undefined || v === null) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    };
+
+    const maxCols = Math.max(assessmentHeader.length, bookingHeader.length);
+    const pad = (row: string[]) => {
+      while (row.length < maxCols) row.push("");
+      return row;
+    };
+
+    const rows: string[] = [];
+    // Unified header
+    const unifiedHeader = [
+      "種別", "ID", "タイムスタンプ", "フィールド1", "フィールド2",
+      "フィールド3", "フィールド4", "フィールド5", "フィールド6",
+      "フィールド7", "フィールド8", "フィールド9", "対応済", "対応日時",
+    ];
+
+    // Assessment rows section
+    rows.push(assessmentHeader.map(esc).join(","));
+    for (const l of assessmentLogs) {
+      rows.push(pad([
+        "判定", l.id, l.timestamp,
+        l.result === "acceptable" ? "受入可能" : l.result === "safety_risk" ? "要慎重検討" : "要相談",
+        l.disease, l.adl, l.dementiaLevel || "", l.gender, l.budget, l.timing,
+        l.reason || "", (l.triggerFlags || []).join(";"),
+        l.isHandled ? "済" : "未", l.handledAt || "",
+      ].map(esc)).join(","));
+    }
+
+    rows.push(""); // blank separator
+
+    // Booking rows section
+    rows.push(bookingHeader.map(esc).join(","));
+    for (const l of bookingLogs) {
+      rows.push(pad([
+        "受付", l.id, l.timestamp, l.facilityName, l.contactName, l.phone,
+        l.email, l.preferredDate, l.preferredTime, l.notes,
+        l.isHandled ? "済" : "未", l.handledAt || "",
+      ].map(esc)).join(","));
+    }
+
+    const blob = new Blob([BOM + rows.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ee-sumai-all-logs_${yyyymmdd}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("CSVバックアップをダウンロードしました");
+  };
+
   const handleCleanup = (cutoffISO: string, label: string) => {
     const aCount = assessmentLogs.filter((l) => l.timestamp < cutoffISO).length;
     const bCount = bookingLogs.filter((l) => l.timestamp < cutoffISO).length;
@@ -305,9 +376,22 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mb-8">
-          <h1 className="mb-1 text-2xl font-bold text-slate-800">管理画面</h1>
-          <p className="text-sm text-muted">優先面談枠の管理と判定ログの確認</p>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="mb-1 text-2xl font-bold text-slate-800">管理画面</h1>
+            <p className="text-sm text-muted">優先面談枠の管理と判定ログの確認</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCsvBackup}
+            disabled={assessmentLogs.length === 0 && bookingLogs.length === 0}
+            className="flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            CSVバックアップ
+          </button>
         </div>
 
         {/* Tabs */}
