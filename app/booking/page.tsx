@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import { addBookingLog, mockEmailService } from "@/app/lib/slotStore";
+import { addBookingLog, sendBookingNotification } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
 const TIME_SLOT_OPTIONS = [
@@ -93,7 +93,7 @@ export default function BookingPage() {
   const isFormValid =
     facilityName && contactName && phone && dateSlots[0].date;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
@@ -115,7 +115,10 @@ export default function BookingPage() {
       notes: dateSlots.length > 1 ? `希望日程: ${allDates}\n${notes}` : notes,
     });
 
-    mockEmailService({
+    const isRepeater = !!getSavedContact();
+
+    // GASへ通知送信（非同期・失敗しても受付は完了扱い）
+    sendBookingNotification({
       facilityName,
       contactName,
       phone,
@@ -124,7 +127,8 @@ export default function BookingPage() {
       preferredTime: dateSlots[0].timeSlot || "指定なし",
       notes,
       allDateSlots: dateSlots.filter((ds) => ds.date),
-    });
+      isRepeater,
+    }).catch((err) => console.error("[notify] 送信失敗:", err));
 
     saveContact({ facilityName, contactName, phone, email });
 

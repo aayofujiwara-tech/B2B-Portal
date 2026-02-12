@@ -264,7 +264,7 @@ export function saveNotificationEmails(emails: string[]): void {
   localStorage.setItem(NOTIFICATION_EMAILS_KEY, JSON.stringify(emails));
 }
 
-// --- Mock Email Service (GAS連携準備) ---
+// --- Booking Notification Service (GAS連携) ---
 
 export interface BookingNotificationPayload {
   to: string[];
@@ -276,21 +276,33 @@ export interface BookingNotificationPayload {
     email: string;
     preferredDates: { date: string; timeSlot: string }[];
     notes: string;
+    assessmentResult: {
+      status: string;
+      disease: string;
+      adl: string;
+      reason: string;
+    } | null;
+    isRepeater: boolean;
     timestamp: string;
     urgencyMessage: string;
   };
 }
 
-export function mockEmailService(
+export async function sendBookingNotification(
   booking: Omit<BookingLog, "id" | "timestamp"> & {
     allDateSlots?: { date: string; timeSlot: string }[];
+    isRepeater?: boolean;
   }
-): BookingNotificationPayload | null {
+): Promise<{ ok: boolean; payload: BookingNotificationPayload | null }> {
   const recipients = getNotificationEmails();
   if (recipients.length === 0) {
-    console.log("[mockEmailService] 通知先未設定のためスキップ");
-    return null;
+    console.warn("[notify] 通知先未設定のためスキップ");
+    return { ok: false, payload: null };
   }
+
+  // 直近の判定結果を取得
+  const assessmentLogs = getAssessmentLogs();
+  const latest = assessmentLogs.length > 0 ? assessmentLogs[0] : null;
 
   const payload: BookingNotificationPayload = {
     to: recipients,
@@ -304,16 +316,39 @@ export function mockEmailService(
         { date: booking.preferredDate, timeSlot: booking.preferredTime },
       ],
       notes: booking.notes,
+      assessmentResult: latest
+        ? {
+            status: latest.result === "acceptable" ? "受入可能" : "要相談",
+            disease: latest.disease,
+            adl: latest.adl,
+            reason: latest.reason || "",
+          }
+        : null,
+      isRepeater: booking.isRepeater ?? false,
       timestamp: new Date().toISOString(),
-      urgencyMessage:
-        "至急、上記連絡先へ日程確定の連絡をお願いします。",
+      urgencyMessage: "至急、上記連絡先へ日程確定の連絡をお願いします。",
     },
   };
 
-  // GAS連携時はここで fetch(GAS_WEBHOOK_URL, { method: "POST", body: JSON.stringify(payload) })
-  console.log("[mockEmailService] 通知ペイロード生成:", JSON.stringify(payload, null, 2));
+  try {
+    const res = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  return payload;
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[notify] API応答エラー:", res.status, err);
+      return { ok: false, payload };
+    }
+
+    console.log("[notify] 通知送信成功");
+    return { ok: true, payload };
+  } catch (err) {
+    console.error("[notify] ネットワークエラー:", err);
+    return { ok: false, payload };
+  }
 }
 
 // --- Assessment Logic ---
