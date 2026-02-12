@@ -10,6 +10,8 @@ import {
   getBookingLogs,
   getNotificationEmails,
   saveNotificationEmails,
+  toggleAssessmentHandled,
+  toggleBookingHandled,
   FACILITY_IDS,
   FACILITY_LABELS,
   type SlotConfig,
@@ -152,21 +154,26 @@ export default function AdminPage() {
         {/* Tabs */}
         <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:flex">
           {[
-            { key: "slots" as const, label: "面談枠管理" },
-            { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）` },
-            { key: "bookings" as const, label: `受付ログ（${bookingLogs.length}）` },
-            { key: "notifications" as const, label: "通知設定" },
+            { key: "slots" as const, label: "面談枠管理", unhandled: 0 },
+            { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）`, unhandled: assessmentLogs.filter((l) => !l.isHandled).length },
+            { key: "bookings" as const, label: `受付ログ（${bookingLogs.length}）`, unhandled: bookingLogs.filter((l) => !l.isHandled).length },
+            { key: "notifications" as const, label: "通知設定", unhandled: 0 },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-md py-2.5 text-xs font-medium transition sm:py-2 sm:text-sm ${
+              className={`relative flex-1 rounded-md py-2.5 text-xs font-medium transition sm:py-2 sm:text-sm ${
                 activeTab === tab.key
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-muted hover:text-slate-600"
               }`}
             >
               {tab.label}
+              {tab.unhandled > 0 && (
+                <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {tab.unhandled}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -263,6 +270,16 @@ export default function AdminPage() {
         {/* Assessment Logs */}
         {activeTab === "assessments" && (
           <div className="animate-fade-in">
+            {assessmentLogs.length > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <span className="text-sm font-medium text-slate-700">
+                  未対応：<span className="font-bold text-red-600">{assessmentLogs.filter((l) => !l.isHandled).length}</span>件
+                </span>
+                <span className="text-sm text-muted">
+                  ／ 全{assessmentLogs.length}件
+                </span>
+              </div>
+            )}
             {assessmentLogs.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
                 <p className="text-muted">判定ログはまだありません</p>
@@ -272,24 +289,35 @@ export default function AdminPage() {
                 {assessmentLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className={`rounded-xl border bg-white p-4 shadow-sm transition ${
+                      log.isHandled
+                        ? "border-slate-100 opacity-60"
+                        : "border-slate-200"
+                    }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          log.result === "acceptable"
-                            ? "bg-emerald-50 text-emerald-700"
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            log.result === "acceptable"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : log.result === "safety_risk"
+                                ? "bg-red-50 text-red-700"
+                                : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {log.result === "acceptable"
+                            ? "受入可能"
                             : log.result === "safety_risk"
-                              ? "bg-red-50 text-red-700"
-                              : "bg-amber-50 text-amber-700"
-                        }`}
-                      >
-                        {log.result === "acceptable"
-                          ? "受入可能"
-                          : log.result === "safety_risk"
-                            ? "要慎重検討"
-                            : "要相談"}
-                      </span>
+                              ? "要慎重検討"
+                              : "要相談"}
+                        </span>
+                        {log.isHandled && (
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                            済
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-muted">
                         {new Date(log.timestamp).toLocaleString("ja-JP")}
                       </span>
@@ -319,6 +347,34 @@ export default function AdminPage() {
                     {log.reason && (
                       <p className="mt-2 text-sm text-muted sm:text-xs">{log.reason}</p>
                     )}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = toggleAssessmentHandled(log.id);
+                          setAssessmentLogs(updated);
+                        }}
+                        className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
+                          log.isHandled
+                            ? "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {log.isHandled ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          ) : (
+                            <rect x="3" y="3" width="18" height="18" rx="3" strokeWidth={2} />
+                          )}
+                        </svg>
+                        {log.isHandled ? "対応済みを取消" : "対応完了"}
+                      </button>
+                      {log.isHandled && log.handledAt && (
+                        <span className="text-xs text-muted">
+                          対応日時：{new Date(log.handledAt).toLocaleString("ja-JP")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -329,6 +385,16 @@ export default function AdminPage() {
         {/* Booking Logs */}
         {activeTab === "bookings" && (
           <div className="animate-fade-in">
+            {bookingLogs.length > 0 && (
+              <div className="mb-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                <span className="text-sm font-medium text-slate-700">
+                  未対応：<span className="font-bold text-red-600">{bookingLogs.filter((l) => !l.isHandled).length}</span>件
+                </span>
+                <span className="text-sm text-muted">
+                  ／ 全{bookingLogs.length}件
+                </span>
+              </div>
+            )}
             {bookingLogs.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
                 <p className="text-muted">受付ログはまだありません</p>
@@ -338,12 +404,23 @@ export default function AdminPage() {
                 {bookingLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className={`rounded-xl border bg-white p-4 shadow-sm transition ${
+                      log.isHandled
+                        ? "border-slate-100 opacity-60"
+                        : "border-slate-200"
+                    }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-bold text-slate-800">
-                        {log.facilityName}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">
+                          {log.facilityName}
+                        </span>
+                        {log.isHandled && (
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                            済
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-muted">
                         {new Date(log.timestamp).toLocaleString("ja-JP")}
                       </span>
@@ -375,6 +452,34 @@ export default function AdminPage() {
                         備考: {log.notes}
                       </p>
                     )}
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = toggleBookingHandled(log.id);
+                          setBookingLogs(updated);
+                        }}
+                        className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
+                          log.isHandled
+                            ? "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {log.isHandled ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          ) : (
+                            <rect x="3" y="3" width="18" height="18" rx="3" strokeWidth={2} />
+                          )}
+                        </svg>
+                        {log.isHandled ? "対応済みを取消" : "対応完了"}
+                      </button>
+                      {log.isHandled && log.handledAt && (
+                        <span className="text-xs text-muted">
+                          対応日時：{new Date(log.handledAt).toLocaleString("ja-JP")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

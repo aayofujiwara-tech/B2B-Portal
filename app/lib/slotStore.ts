@@ -26,6 +26,8 @@ export interface AssessmentLog {
   result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
   triggerFlags?: string[];
+  isHandled?: boolean;
+  handledAt?: string;
 }
 
 export interface BookingLog {
@@ -38,6 +40,8 @@ export interface BookingLog {
   preferredDate: string;
   preferredTime: string;
   notes: string;
+  isHandled?: boolean;
+  handledAt?: string;
 }
 
 // --- Facility Definitions ---
@@ -204,6 +208,42 @@ export function addBookingLog(
     localStorage.setItem(BOOKING_KEY, JSON.stringify(logs));
   }
   return newLog;
+}
+
+// --- Toggle Handled State ---
+
+export function toggleAssessmentHandled(id: string): AssessmentLog[] {
+  const logs = getAssessmentLogs();
+  const updated = logs.map((log) =>
+    log.id === id
+      ? {
+          ...log,
+          isHandled: !log.isHandled,
+          handledAt: !log.isHandled ? new Date().toISOString() : undefined,
+        }
+      : log
+  );
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOG_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+export function toggleBookingHandled(id: string): BookingLog[] {
+  const logs = getBookingLogs();
+  const updated = logs.map((log) =>
+    log.id === id
+      ? {
+          ...log,
+          isHandled: !log.isHandled,
+          handledAt: !log.isHandled ? new Date().toISOString() : undefined,
+        }
+      : log
+  );
+  if (typeof window !== "undefined") {
+    localStorage.setItem(BOOKING_KEY, JSON.stringify(updated));
+  }
+  return updated;
 }
 
 // --- Disease Notes (備考) ---
