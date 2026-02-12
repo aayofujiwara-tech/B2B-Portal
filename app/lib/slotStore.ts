@@ -249,6 +249,70 @@ export function getDiseaseNotes(disease: string): DiseaseNote[] {
   return notes;
 }
 
+// --- Notification Email Management ---
+
+const NOTIFICATION_EMAILS_KEY = "b2b_notification_emails";
+
+export function getNotificationEmails(): string[] {
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(NOTIFICATION_EMAILS_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function saveNotificationEmails(emails: string[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(NOTIFICATION_EMAILS_KEY, JSON.stringify(emails));
+}
+
+// --- Mock Email Service (GAS連携準備) ---
+
+export interface BookingNotificationPayload {
+  to: string[];
+  subject: string;
+  body: {
+    contactName: string;
+    facilityName: string;
+    phone: string;
+    email: string;
+    preferredDates: { date: string; timeSlot: string }[];
+    notes: string;
+    timestamp: string;
+  };
+}
+
+export function mockEmailService(
+  booking: Omit<BookingLog, "id" | "timestamp"> & {
+    allDateSlots?: { date: string; timeSlot: string }[];
+  }
+): BookingNotificationPayload | null {
+  const recipients = getNotificationEmails();
+  if (recipients.length === 0) {
+    console.log("[mockEmailService] 通知先未設定のためスキップ");
+    return null;
+  }
+
+  const payload: BookingNotificationPayload = {
+    to: recipients,
+    subject: `【面談予約】${booking.facilityName} - ${booking.contactName}様`,
+    body: {
+      contactName: booking.contactName,
+      facilityName: booking.facilityName,
+      phone: booking.phone,
+      email: booking.email,
+      preferredDates: booking.allDateSlots || [
+        { date: booking.preferredDate, timeSlot: booking.preferredTime },
+      ],
+      notes: booking.notes,
+      timestamp: new Date().toISOString(),
+    },
+  };
+
+  // GAS連携時はここで fetch(GAS_WEBHOOK_URL, { method: "POST", body: JSON.stringify(payload) })
+  console.log("[mockEmailService] 通知ペイロード生成:", JSON.stringify(payload, null, 2));
+
+  return payload;
+}
+
 // --- Assessment Logic ---
 
 export interface AssessmentInput {

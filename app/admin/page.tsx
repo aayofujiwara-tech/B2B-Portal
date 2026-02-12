@@ -8,6 +8,8 @@ import {
   reloadSlots,
   getAssessmentLogs,
   getBookingLogs,
+  getNotificationEmails,
+  saveNotificationEmails,
   FACILITY_IDS,
   FACILITY_LABELS,
   type SlotConfig,
@@ -72,8 +74,11 @@ export default function AdminPage() {
   });
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);
+  const [notifyEmails, setNotifyEmails] = useState<string[]>([]);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [activeTab, setActiveTab] = useState<
-    "slots" | "assessments" | "bookings"
+    "slots" | "assessments" | "bookings" | "notifications"
   >("slots");
 
   const loadData = () => {
@@ -84,6 +89,7 @@ export default function AdminPage() {
     setFacilitySlots(slots);
     setAssessmentLogs(getAssessmentLogs());
     setBookingLogs(getBookingLogs());
+    setNotifyEmails(getNotificationEmails());
   };
 
   useEffect(() => {
@@ -134,6 +140,7 @@ export default function AdminPage() {
             { key: "slots" as const, label: "面談枠管理" },
             { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）` },
             { key: "bookings" as const, label: `予約ログ（${bookingLogs.length}）` },
+            { key: "notifications" as const, label: "通知設定" },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -351,6 +358,107 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+        {/* Notification Email Management */}
+        {activeTab === "notifications" && (
+          <div className="animate-fade-in">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-1 text-base font-bold text-slate-800">
+                通知先メールアドレス設定
+              </h2>
+              <p className="mb-5 text-xs text-muted">
+                予約発生時にここで登録されたアドレス全てへ通知メールが送信されます（GAS連携準備）
+              </p>
+
+              {/* Add email form */}
+              <div className="mb-5 flex gap-2">
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => { setNewEmail(e.target.value); setEmailError(""); }}
+                  placeholder="example@company.com"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const email = newEmail.trim();
+                      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        setEmailError("有効なメールアドレスを入力してください");
+                        return;
+                      }
+                      if (notifyEmails.includes(email)) {
+                        setEmailError("このアドレスは既に登録済みです");
+                        return;
+                      }
+                      const updated = [...notifyEmails, email];
+                      saveNotificationEmails(updated);
+                      setNotifyEmails(updated);
+                      setNewEmail("");
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const email = newEmail.trim();
+                    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                      setEmailError("有効なメールアドレスを入力してください");
+                      return;
+                    }
+                    if (notifyEmails.includes(email)) {
+                      setEmailError("このアドレスは既に登録済みです");
+                      return;
+                    }
+                    const updated = [...notifyEmails, email];
+                    saveNotificationEmails(updated);
+                    setNotifyEmails(updated);
+                    setNewEmail("");
+                  }}
+                  className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+                >
+                  追加
+                </button>
+              </div>
+              {emailError && (
+                <p className="mb-3 -mt-3 text-xs text-red-600">{emailError}</p>
+              )}
+
+              {/* Email list */}
+              {notifyEmails.length === 0 ? (
+                <div className="rounded-lg bg-slate-50 p-6 text-center">
+                  <p className="text-sm text-muted">通知先が未登録です</p>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {notifyEmails.map((em, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
+                    >
+                      <span className="text-sm text-slate-700">{em}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = notifyEmails.filter((_, idx) => idx !== i);
+                          saveNotificationEmails(updated);
+                          setNotifyEmails(updated);
+                        }}
+                        className="rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                        aria-label="削除"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-4 text-xs text-muted">
+                登録数: {notifyEmails.length}件
+              </p>
+            </div>
           </div>
         )}
       </main>

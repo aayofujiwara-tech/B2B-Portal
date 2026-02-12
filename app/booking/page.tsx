@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import { addBookingLog } from "@/app/lib/slotStore";
+import { addBookingLog, mockEmailService } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
 const TIME_SLOT_OPTIONS = [
@@ -113,6 +113,17 @@ export default function BookingPage() {
       preferredDate: dateSlots[0].date,
       preferredTime: dateSlots[0].timeSlot || "指定なし",
       notes: dateSlots.length > 1 ? `希望日程: ${allDates}\n${notes}` : notes,
+    });
+
+    mockEmailService({
+      facilityName,
+      contactName,
+      phone,
+      email,
+      preferredDate: dateSlots[0].date,
+      preferredTime: dateSlots[0].timeSlot || "指定なし",
+      notes,
+      allDateSlots: dateSlots.filter((ds) => ds.date),
     });
 
     saveContact({ facilityName, contactName, phone, email });

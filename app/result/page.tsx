@@ -259,22 +259,23 @@ function ResultContent() {
       </div>
 
       {/* 施設チラシ (PDF直リンク) */}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border-2 border-amber-200 bg-amber-50 p-5 shadow-sm">
         <h3 className="mb-3 text-sm font-bold text-slate-800">
-          物件チラシ(PDF)
+          ご家族説明用チラシ
         </h3>
         {facility !== "any" ? (
           <a
             href={FLYER_PDF_MAP[facility as FacilityId]}
             target="_blank"
             rel="noopener noreferrer"
+            download
             onClick={() => trackEvent("flyer_view", "click_flyer_pdf", facility)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 py-3 text-sm font-medium text-primary transition hover:bg-primary/10"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 py-3 text-sm font-bold text-white shadow-md transition hover:bg-amber-600 active:scale-[0.98]"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            {FACILITY_LABELS[facility as FacilityId]}のチラシ(PDF)を別タブで開く
+            {FACILITY_LABELS[facility as FacilityId]}のチラシをダウンロード
           </a>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -284,8 +285,9 @@ function ResultContent() {
                 href={FLYER_PDF_MAP[fid]}
                 target="_blank"
                 rel="noopener noreferrer"
+                download
                 onClick={() => trackEvent("flyer_view", "click_flyer_pdf", fid)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
               >
                 {FACILITY_LABELS[fid]}
               </a>
