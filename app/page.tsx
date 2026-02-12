@@ -40,14 +40,13 @@ const FACILITY_OPTIONS = [
   { id: "any", label: "どこでも可" },
 ];
 
-const COMMON_FEATURES = ["保証人不要", "初期費用分割可能", "生活保護受給者対応"];
-
 const FACILITY_INFO: Record<string, {
   name: string;
   access: string;
   structure: string;
   rent: string;
   features: string[];
+  caution?: string;
   pdf: string;
 }> = {
   tsukamoto: {
@@ -55,7 +54,7 @@ const FACILITY_INFO: Record<string, {
     access: "JR塚本駅 徒歩7分",
     structure: "鉄骨7階建",
     rent: "賃料4.0万円〜",
-    features: COMMON_FEATURES,
+    features: ["保証人不要", "初期費用分割可能", "生活保護受給者対応"],
     pdf: "/pdf/flyer-tsukamoto.pdf",
   },
   utajima: {
@@ -63,7 +62,7 @@ const FACILITY_INFO: Record<string, {
     access: "JR塚本駅 徒歩8分",
     structure: "鉄骨6階建",
     rent: "賃料4.0万円〜",
-    features: COMMON_FEATURES,
+    features: ["保証人不要", "初期費用分割可能", "生活保護受給者対応"],
     pdf: "/pdf/flyer-utajima.pdf",
   },
   toyoshin: {
@@ -71,7 +70,8 @@ const FACILITY_INFO: Record<string, {
     access: "阪急上新庄駅 徒歩10分",
     structure: "鉄骨10階建",
     rent: "賃料4.0万円〜",
-    features: COMMON_FEATURES,
+    features: ["保証人不要", "初期費用分割可能"],
+    caution: "※現在、豊新では生活保護の受入を停止しております",
     pdf: "/pdf/flyer-houshin.pdf",
   },
 };
@@ -84,6 +84,7 @@ export default function TopPage() {
   const [budget, setBudget] = useState("");
   const [timing, setTiming] = useState("");
   const [facility, setFacility] = useState("");
+  const [welfare, setWelfare] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
 
@@ -107,6 +108,7 @@ export default function TopPage() {
       budget,
       timing,
       facility,
+      welfare: welfare ? "1" : "0",
     });
 
     setTimeout(() => {
@@ -153,6 +155,81 @@ export default function TopPage() {
             >
               スピード面談予約へ進む
             </Link>
+          </div>
+        )}
+
+        {/* Facility Selector (top-level, before form) */}
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-base font-bold text-slate-800">
+            拠点を選択
+          </h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {FACILITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  setFacility(opt.id);
+                  trackEvent("assessment_start", "select_facility", opt.id);
+                }}
+                className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                  facility === opt.id
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-slate-200 text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Facility Info Card (appears when a specific facility is selected) */}
+        {facility && facility !== "any" && FACILITY_INFO[facility] && (
+          <div className="mb-6 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-white p-5 shadow-sm">
+            <p className="mb-2.5 text-base font-bold text-slate-800">
+              {FACILITY_INFO[facility].name}
+            </p>
+            <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-3">
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                {FACILITY_INFO[facility].access}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                {FACILITY_INFO[facility].structure}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                {FACILITY_INFO[facility].rent}
+              </span>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {FACILITY_INFO[facility].features.map((f) => (
+                <span
+                  key={f}
+                  className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+            {FACILITY_INFO[facility].caution && (
+              <p className="mb-3 text-xs font-medium text-amber-700">
+                {FACILITY_INFO[facility].caution}
+              </p>
+            )}
+            <a
+              href={FACILITY_INFO[facility].pdf}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-primary-dark active:scale-[0.98]"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              ご家族説明用チラシ(PDF)を開く
+            </a>
           </div>
         )}
 
@@ -289,72 +366,23 @@ export default function TopPage() {
               </div>
             </div>
 
-            {/* Facility */}
+            {/* Welfare */}
             <div className="mb-5">
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                希望施設
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 transition hover:border-slate-300">
+                <input
+                  type="checkbox"
+                  checked={welfare}
+                  onChange={(e) => setWelfare(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary accent-primary"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  生活保護受給あり
+                </span>
               </label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {FACILITY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      setFacility(opt.id);
-                      trackEvent("assessment_start", "select_facility", opt.id);
-                    }}
-                    className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
-                      facility === opt.id
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              {/* Facility Info Card */}
-              {facility && facility !== "any" && FACILITY_INFO[facility] && (
-                <div className="mt-3 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-white p-4">
-                  <p className="mb-2 text-sm font-bold text-slate-800">
-                    {FACILITY_INFO[facility].name}
-                  </p>
-                  <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-3">
-                    <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      {FACILITY_INFO[facility].access}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                      {FACILITY_INFO[facility].structure}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      {FACILITY_INFO[facility].rent}
-                    </span>
-                  </div>
-                  <div className="mb-3 flex flex-wrap gap-1.5">
-                    {FACILITY_INFO[facility].features.map((f) => (
-                      <span
-                        key={f}
-                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
-                      >
-                        {f}
-                      </span>
-                    ))}
-                  </div>
-                  <a
-                    href={FACILITY_INFO[facility].pdf}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-white px-3 py-2 text-xs font-bold text-primary shadow-sm transition hover:bg-primary/5"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    物件チラシ(PDF)を開く
-                  </a>
-                </div>
+              {welfare && facility === "toyoshin" && (
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                  豊新は現在生活保護の受入を停止しております。塚本・歌島では受入可能です。
+                </p>
               )}
             </div>
           </div>

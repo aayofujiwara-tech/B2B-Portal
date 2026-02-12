@@ -257,6 +257,8 @@ export interface AssessmentInput {
   gender: string;
   budget: string;
   timing: string;
+  facility?: string;
+  welfare?: boolean;
 }
 
 export interface AssessmentResult {
@@ -270,6 +272,15 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   const reasons: string[] = [];
   const triggerFlags: string[] = [];
   let needsConsultation = false;
+
+  // Toyoshin + welfare check
+  if (input.facility === "toyoshin" && input.welfare) {
+    needsConsultation = true;
+    triggerFlags.push("toyoshin_welfare_block");
+    reasons.push(
+      "豊新は現在生活保護の受入を停止しておりますが、近隣の塚本・歌島では受入可能です。このまま面談予約を承り、最適な拠点をご案内いたします。"
+    );
+  }
 
   // Disease check — only ventilator requires consultation
   if (input.disease.includes("人工呼吸器")) {

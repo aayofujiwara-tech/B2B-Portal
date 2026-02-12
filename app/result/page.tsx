@@ -37,6 +37,7 @@ function ResultContent() {
   const budget = searchParams.get("budget") || "";
   const timing = searchParams.get("timing") || "";
   const facility = searchParams.get("facility") || "any";
+  const welfare = searchParams.get("welfare") === "1";
 
   useEffect(() => {
     if (!disease) return;
@@ -49,6 +50,8 @@ function ResultContent() {
       gender,
       budget,
       timing,
+      facility,
+      welfare,
     });
 
     addAssessmentLog({
