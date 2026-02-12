@@ -12,6 +12,10 @@ import {
   saveNotificationEmails,
   toggleAssessmentHandled,
   toggleBookingHandled,
+  deleteAssessmentLogs,
+  deleteBookingLogs,
+  deleteAssessmentLogsBefore,
+  deleteBookingLogsBefore,
   FACILITY_IDS,
   FACILITY_LABELS,
   type SlotConfig,
@@ -22,6 +26,57 @@ import {
 import { trackEvent } from "@/app/lib/analytics";
 
 const ADMIN_PASSWORD = "ikuta2024";
+
+function ConfirmModal({
+  title,
+  message,
+  warning,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  warning?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className={`mb-2 text-base font-bold ${warning ? "text-red-700" : "text-slate-800"}`}>
+          {title}
+        </h3>
+        <p className="mb-5 whitespace-pre-wrap text-sm text-slate-600">{message}</p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-lg border border-slate-300 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
+          >
+            キャンセル
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`flex-1 rounded-lg py-3 text-sm font-bold text-white transition active:scale-[0.98] ${
+              warning
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-primary hover:bg-primary-dark"
+            }`}
+          >
+            削除する
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CLEANUP_PRESETS = [
+  { label: "1ヶ月前以前", months: 1 },
+  { label: "3ヶ月前以前", months: 3 },
+  { label: "6ヶ月前以前", months: 6 },
+] as const;
 
 function AdminAuth({ onAuth }: { onAuth: () => void }) {
   const [pw, setPw] = useState("");
@@ -83,6 +138,20 @@ export default function AdminPage() {
     "slots" | "assessments" | "bookings" | "notifications"
   >("slots");
   const [toastMessage, setToastMessage] = useState("");
+  const [selectedAssessments, setSelectedAssessments] = useState<Set<string>>(new Set());
+  const [selectedBookings, setSelectedBookings] = useState<Set<string>>(new Set());
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    warning?: boolean;
+    onConfirm: () => void;
+  } | null>(null);
+  const [cleanupDate, setCleanupDate] = useState("");
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
 
   const loadData = () => {
     const slots = {} as Record<FacilityId, SlotConfig>;
@@ -113,8 +182,87 @@ export default function AdminPage() {
     reloadSlots(newTotals[facilityId], facilityId);
     trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
     loadData();
-    setToastMessage(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
-    setTimeout(() => setToastMessage(""), 3000);
+    showToast(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
+  };
+
+  // --- Delete handlers ---
+  const handleDeleteOneAssessment = (id: string) => {
+    setConfirmAction({
+      title: "ログの削除",
+      message: "このログを削除してもよろしいですか？",
+      onConfirm: () => {
+        setAssessmentLogs(deleteAssessmentLogs([id]));
+        setSelectedAssessments((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        setConfirmAction(null);
+        showToast("ログを1件削除しました");
+      },
+    });
+  };
+
+  const handleDeleteOneBooking = (id: string) => {
+    setConfirmAction({
+      title: "ログの削除",
+      message: "このログを削除してもよろしいですか？",
+      onConfirm: () => {
+        setBookingLogs(deleteBookingLogs([id]));
+        setSelectedBookings((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        setConfirmAction(null);
+        showToast("ログを1件削除しました");
+      },
+    });
+  };
+
+  const handleBulkDeleteAssessments = () => {
+    if (selectedAssessments.size === 0) return;
+    setConfirmAction({
+      title: "一括削除",
+      message: `選択した${selectedAssessments.size}件のログを削除します。よろしいですか？`,
+      warning: true,
+      onConfirm: () => {
+        setAssessmentLogs(deleteAssessmentLogs([...selectedAssessments]));
+        setSelectedAssessments(new Set());
+        setConfirmAction(null);
+        showToast(`${selectedAssessments.size}件のログを削除しました`);
+      },
+    });
+  };
+
+  const handleBulkDeleteBookings = () => {
+    if (selectedBookings.size === 0) return;
+    setConfirmAction({
+      title: "一括削除",
+      message: `選択した${selectedBookings.size}件のログを削除します。よろしいですか？`,
+      warning: true,
+      onConfirm: () => {
+        setBookingLogs(deleteBookingLogs([...selectedBookings]));
+        setSelectedBookings(new Set());
+        setConfirmAction(null);
+        showToast(`${selectedBookings.size}件のログを削除しました`);
+      },
+    });
+  };
+
+  const handleCleanup = (cutoffISO: string, label: string) => {
+    const aCount = assessmentLogs.filter((l) => l.timestamp < cutoffISO).length;
+    const bCount = bookingLogs.filter((l) => l.timestamp < cutoffISO).length;
+    const total = aCount + bCount;
+    if (total === 0) {
+      showToast("該当するログはありません");
+      return;
+    }
+    setConfirmAction({
+      title: "期間指定クリーンアップ",
+      message: `${label}の全てのデータ（判定${aCount}件・受付${bCount}件、計${total}件）が消去されます。\nこの操作は取り消せません。本当によろしいですか？`,
+      warning: true,
+      onConfirm: () => {
+        setAssessmentLogs(deleteAssessmentLogsBefore(cutoffISO));
+        setBookingLogs(deleteBookingLogsBefore(cutoffISO));
+        setSelectedAssessments(new Set());
+        setSelectedBookings(new Set());
+        setConfirmAction(null);
+        showToast(`${total}件のログを削除しました`);
+      },
+    });
   };
 
   if (!facilitySlots) {
@@ -134,6 +282,17 @@ export default function AdminPage() {
       <Header />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+        {/* Confirm modal */}
+        {confirmAction && (
+          <ConfirmModal
+            title={confirmAction.title}
+            message={confirmAction.message}
+            warning={confirmAction.warning}
+            onConfirm={confirmAction.onConfirm}
+            onCancel={() => setConfirmAction(null)}
+          />
+        )}
+
         {/* Toast notification */}
         {toastMessage && (
           <div className="fixed left-1/2 top-4 z-50 -translate-x-1/2 animate-fade-in rounded-lg border border-emerald-200 bg-emerald-50 px-5 py-3 shadow-lg">
@@ -271,14 +430,46 @@ export default function AdminPage() {
         {activeTab === "assessments" && (
           <div className="animate-fade-in">
             {assessmentLogs.length > 0 && (
-              <div className="mb-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
-                <span className="text-sm font-medium text-slate-700">
-                  未対応：<span className="font-bold text-red-600">{assessmentLogs.filter((l) => !l.isHandled).length}</span>件
-                </span>
-                <span className="text-sm text-muted">
-                  ／ 全{assessmentLogs.length}件
-                </span>
-              </div>
+              <>
+                {/* Stats + bulk toolbar */}
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">
+                    未対応：<span className="font-bold text-red-600">{assessmentLogs.filter((l) => !l.isHandled).length}</span>件
+                  </span>
+                  <span className="text-sm text-muted">
+                    ／ 全{assessmentLogs.length}件
+                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded accent-primary"
+                        checked={selectedAssessments.size === assessmentLogs.length && assessmentLogs.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAssessments(new Set(assessmentLogs.map((l) => l.id)));
+                          } else {
+                            setSelectedAssessments(new Set());
+                          }
+                        }}
+                      />
+                      全選択
+                    </label>
+                    {selectedAssessments.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBulkDeleteAssessments}
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red-50 px-4 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100 active:scale-[0.98]"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        選択削除（{selectedAssessments.size}件）
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
             {assessmentLogs.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -292,11 +483,27 @@ export default function AdminPage() {
                     className={`rounded-xl border bg-white p-4 shadow-sm transition ${
                       log.isHandled
                         ? "border-slate-100 opacity-60"
-                        : "border-slate-200"
+                        : selectedAssessments.has(log.id)
+                          ? "border-primary/40 ring-2 ring-primary/10"
+                          : "border-slate-200"
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <label className="flex h-[44px] w-[44px] shrink-0 cursor-pointer items-center justify-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded accent-primary"
+                            checked={selectedAssessments.has(log.id)}
+                            onChange={(e) => {
+                              setSelectedAssessments((prev) => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(log.id) : next.delete(log.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </label>
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             log.result === "acceptable"
@@ -318,9 +525,21 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-muted">
-                        {new Date(log.timestamp).toLocaleString("ja-JP")}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted">
+                          {new Date(log.timestamp).toLocaleString("ja-JP")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOneAssessment(log.id)}
+                          className="ml-1 flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label="削除"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-5 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
@@ -386,14 +605,46 @@ export default function AdminPage() {
         {activeTab === "bookings" && (
           <div className="animate-fade-in">
             {bookingLogs.length > 0 && (
-              <div className="mb-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
-                <span className="text-sm font-medium text-slate-700">
-                  未対応：<span className="font-bold text-red-600">{bookingLogs.filter((l) => !l.isHandled).length}</span>件
-                </span>
-                <span className="text-sm text-muted">
-                  ／ 全{bookingLogs.length}件
-                </span>
-              </div>
+              <>
+                {/* Stats + bulk toolbar */}
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">
+                    未対応：<span className="font-bold text-red-600">{bookingLogs.filter((l) => !l.isHandled).length}</span>件
+                  </span>
+                  <span className="text-sm text-muted">
+                    ／ 全{bookingLogs.length}件
+                  </span>
+                  <div className="ml-auto flex items-center gap-2">
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded accent-primary"
+                        checked={selectedBookings.size === bookingLogs.length && bookingLogs.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedBookings(new Set(bookingLogs.map((l) => l.id)));
+                          } else {
+                            setSelectedBookings(new Set());
+                          }
+                        }}
+                      />
+                      全選択
+                    </label>
+                    {selectedBookings.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBulkDeleteBookings}
+                        className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red-50 px-4 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100 active:scale-[0.98]"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        選択削除（{selectedBookings.size}件）
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
             {bookingLogs.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -407,11 +658,27 @@ export default function AdminPage() {
                     className={`rounded-xl border bg-white p-4 shadow-sm transition ${
                       log.isHandled
                         ? "border-slate-100 opacity-60"
-                        : "border-slate-200"
+                        : selectedBookings.has(log.id)
+                          ? "border-primary/40 ring-2 ring-primary/10"
+                          : "border-slate-200"
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <label className="flex h-[44px] w-[44px] shrink-0 cursor-pointer items-center justify-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded accent-primary"
+                            checked={selectedBookings.has(log.id)}
+                            onChange={(e) => {
+                              setSelectedBookings((prev) => {
+                                const next = new Set(prev);
+                                e.target.checked ? next.add(log.id) : next.delete(log.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </label>
                         <span className="text-sm font-bold text-slate-800">
                           {log.facilityName}
                         </span>
@@ -421,9 +688,21 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-muted">
-                        {new Date(log.timestamp).toLocaleString("ja-JP")}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted">
+                          {new Date(log.timestamp).toLocaleString("ja-JP")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOneBooking(log.id)}
+                          className="ml-1 flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                          aria-label="削除"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-4 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
@@ -486,6 +765,61 @@ export default function AdminPage() {
             )}
           </div>
         )}
+        {/* Data Cleanup — visible when assessments or bookings tab active and logs exist */}
+        {(activeTab === "assessments" || activeTab === "bookings") &&
+          (assessmentLogs.length > 0 || bookingLogs.length > 0) && (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-1 text-sm font-bold text-slate-800">期間指定クリーンアップ</h3>
+            <p className="mb-4 text-xs text-muted">
+              指定日以前の判定ログ・受付ログを一括削除します（取り消し不可）
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-wrap gap-2">
+                {CLEANUP_PRESETS.map((preset) => {
+                  const cutoff = new Date();
+                  cutoff.setMonth(cutoff.getMonth() - preset.months);
+                  const cutoffISO = cutoff.toISOString();
+                  return (
+                    <button
+                      key={preset.months}
+                      type="button"
+                      onClick={() => handleCleanup(cutoffISO, preset.label)}
+                      className="flex min-h-[44px] items-center rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 transition hover:bg-red-50 hover:border-red-200 hover:text-red-700 active:scale-[0.98]"
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-end gap-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">日付指定</label>
+                  <input
+                    type="date"
+                    value={cleanupDate}
+                    onChange={(e) => setCleanupDate(e.target.value)}
+                    className="min-h-[44px] rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!cleanupDate}
+                  onClick={() => {
+                    const cutoffISO = new Date(cleanupDate + "T23:59:59").toISOString();
+                    handleCleanup(cutoffISO, `${cleanupDate}`);
+                  }}
+                  className="flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red-50 px-4 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  削除実行
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notification Email Management */}
         {activeTab === "notifications" && (
           <div className="animate-fade-in">

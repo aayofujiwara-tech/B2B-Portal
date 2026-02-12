@@ -210,6 +210,42 @@ export function addBookingLog(
   return newLog;
 }
 
+// --- Delete Logs ---
+
+export function deleteAssessmentLogs(ids: string[]): AssessmentLog[] {
+  const idSet = new Set(ids);
+  const updated = getAssessmentLogs().filter((log) => !idSet.has(log.id));
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOG_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+export function deleteBookingLogs(ids: string[]): BookingLog[] {
+  const idSet = new Set(ids);
+  const updated = getBookingLogs().filter((log) => !idSet.has(log.id));
+  if (typeof window !== "undefined") {
+    localStorage.setItem(BOOKING_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+export function deleteAssessmentLogsBefore(cutoff: string): AssessmentLog[] {
+  const updated = getAssessmentLogs().filter((log) => log.timestamp >= cutoff);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOG_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
+export function deleteBookingLogsBefore(cutoff: string): BookingLog[] {
+  const updated = getBookingLogs().filter((log) => log.timestamp >= cutoff);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(BOOKING_KEY, JSON.stringify(updated));
+  }
+  return updated;
+}
+
 // --- Toggle Handled State ---
 
 export function toggleAssessmentHandled(id: string): AssessmentLog[] {
