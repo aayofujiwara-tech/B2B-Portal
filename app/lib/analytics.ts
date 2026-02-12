@@ -13,7 +13,7 @@ type EventCategory =
   | "assessment_submit"
   | "result_view"
   | "consultation_call"
-  | "pdf_download"
+  | "flyer_view"
   | "booking_start"
   | "booking_submit"
   | "admin_action";

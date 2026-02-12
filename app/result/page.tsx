@@ -249,35 +249,36 @@ function ResultContent() {
         </dl>
       </div>
 
-      {/* PDF Download */}
+      {/* 施設チラシ */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="mb-3 text-sm font-bold text-slate-800">
-          施設パンフレット
+          施設チラシ
         </h3>
-        <button
-          onClick={() => {
-            trackEvent("pdf_download", "click_download", "facility_pamphlet");
-            alert(
-              "※ プロトタイプのため、PDFダウンロードは模擬動作です。\n本番環境では実際のパンフレットPDFがダウンロードされます。"
-            );
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 py-3 text-sm font-medium text-primary transition hover:bg-primary/10"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {facility !== "any" ? (
+          <Link
+            href={`/flyer/${facility}`}
+            onClick={() => trackEvent("flyer_view", "click_flyer", facility)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 py-3 text-sm font-medium text-primary transition hover:bg-primary/10"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          施設パンフレットをダウンロード（PDF）
-        </button>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {FACILITY_LABELS[facility as FacilityId]}のチラシを見る
+          </Link>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {(["tsukamoto", "toyoshin", "utajima"] as const).map((fid) => (
+              <Link
+                key={fid}
+                href={`/flyer/${fid}`}
+                onClick={() => trackEvent("flyer_view", "click_flyer", fid)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10"
+              >
+                {FACILITY_LABELS[fid]}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CTA */}
