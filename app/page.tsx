@@ -41,8 +41,8 @@ const TIMING_OPTIONS = [
 
 const FACILITY_OPTIONS = [
   { id: "tsukamoto", label: "塚本" },
-  { id: "toyoshin", label: "豊新" },
   { id: "utajima", label: "歌島" },
+  { id: "toyoshin", label: "豊新" },
   { id: "any", label: "どこでも可" },
 ];
 

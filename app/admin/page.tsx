@@ -69,8 +69,8 @@ export default function AdminPage() {
   >(null);
   const [newTotals, setNewTotals] = useState<Record<FacilityId, number>>({
     tsukamoto: 5,
-    toyoshin: 5,
     utajima: 5,
+    toyoshin: 5,
   });
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);

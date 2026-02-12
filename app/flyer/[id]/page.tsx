@@ -12,14 +12,14 @@ import {
 
 const FLYER_FILES: Record<FacilityId, string> = {
   tsukamoto: "/pdf/flyer-tsukamoto.pdf",
-  toyoshin: "/pdf/flyer-houshin.pdf",
   utajima: "/pdf/flyer-utajima.pdf",
+  toyoshin: "/pdf/flyer-houshin.pdf",
 };
 
 const FLYER_DESCRIPTIONS: Record<FacilityId, string> = {
   tsukamoto: "JR塚本駅 徒歩7分 / 鉄骨7階建 / 賃料4.0万円〜",
-  toyoshin: "阪急上新庄駅 徒歩10分 / 鉄骨10階建 / 賃料4.0万円〜",
   utajima: "JR塚本駅 徒歩8分 / 鉄骨6階建 / 賃料4.0万円〜",
+  toyoshin: "阪急上新庄駅 徒歩10分 / 鉄骨10階建 / 賃料4.0万円〜",
 };
 
 export default function FlyerPage() {

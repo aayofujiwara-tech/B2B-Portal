@@ -42,13 +42,13 @@ export interface BookingLog {
 
 // --- Facility Definitions ---
 
-export const FACILITY_IDS = ["tsukamoto", "toyoshin", "utajima"] as const;
+export const FACILITY_IDS = ["tsukamoto", "utajima", "toyoshin"] as const;
 export type FacilityId = (typeof FACILITY_IDS)[number];
 
 export const FACILITY_LABELS: Record<FacilityId, string> = {
   tsukamoto: "塚本",
-  toyoshin: "豊新",
   utajima: "歌島",
+  toyoshin: "豊新",
 };
 
 const LOG_KEY = "b2b_portal_assessment_logs";

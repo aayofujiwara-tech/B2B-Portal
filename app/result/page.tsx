@@ -22,8 +22,8 @@ import { trackEvent } from "@/app/lib/analytics";
 
 const FLYER_PDF_MAP: Record<FacilityId, string> = {
   tsukamoto: "/pdf/flyer-tsukamoto.pdf",
-  toyoshin: "/pdf/flyer-houshin.pdf",
   utajima: "/pdf/flyer-utajima.pdf",
+  toyoshin: "/pdf/flyer-houshin.pdf",
 };
 
 function ResultContent() {
@@ -364,7 +364,7 @@ function ResultContent() {
           </a>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
-            {(["tsukamoto", "toyoshin", "utajima"] as const).map((fid) => (
+            {(["tsukamoto", "utajima", "toyoshin"] as const).map((fid) => (
               <a
                 key={fid}
                 href={FLYER_PDF_MAP[fid]}
