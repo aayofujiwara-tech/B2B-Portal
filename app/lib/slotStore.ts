@@ -225,7 +225,7 @@ export function getDiseaseNotes(disease: string): DiseaseNote[] {
     });
   }
 
-  if (disease.includes("人工呼吸器")) {
+  if (disease.includes("人工呼吸器") || disease.includes("呼吸器")) {
     notes.push({
       label: "人工呼吸器・気管カニューレ",
       note: "夜間の吸引が不要な場合は受入相談可能です。まずは詳細をお聞かせください",

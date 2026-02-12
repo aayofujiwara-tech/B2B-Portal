@@ -18,6 +18,12 @@ import {
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
+const FLYER_PDF_MAP: Record<FacilityId, string> = {
+  tsukamoto: "/pdf/flyer-tsukamoto.pdf",
+  toyoshin: "/pdf/flyer-houshin.pdf",
+  utajima: "/pdf/flyer-utajima.pdf",
+};
+
 function ResultContent() {
   const searchParams = useSearchParams();
   const [result, setResult] = useState<AssessmentResult | null>(null);
@@ -249,33 +255,37 @@ function ResultContent() {
         </dl>
       </div>
 
-      {/* 施設チラシ */}
+      {/* 施設チラシ (PDF直リンク) */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="mb-3 text-sm font-bold text-slate-800">
-          施設チラシ
+          物件チラシ(PDF)
         </h3>
         {facility !== "any" ? (
-          <Link
-            href={`/flyer/${facility}`}
-            onClick={() => trackEvent("flyer_view", "click_flyer", facility)}
+          <a
+            href={FLYER_PDF_MAP[facility as FacilityId]}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent("flyer_view", "click_flyer_pdf", facility)}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/30 bg-primary/5 py-3 text-sm font-medium text-primary transition hover:bg-primary/10"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            {FACILITY_LABELS[facility as FacilityId]}のチラシを見る
-          </Link>
+            {FACILITY_LABELS[facility as FacilityId]}のチラシ(PDF)を別タブで開く
+          </a>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row">
             {(["tsukamoto", "toyoshin", "utajima"] as const).map((fid) => (
-              <Link
+              <a
                 key={fid}
-                href={`/flyer/${fid}`}
-                onClick={() => trackEvent("flyer_view", "click_flyer", fid)}
+                href={FLYER_PDF_MAP[fid]}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent("flyer_view", "click_flyer_pdf", fid)}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10"
               >
                 {FACILITY_LABELS[fid]}
-              </Link>
+              </a>
             ))}
           </div>
         )}

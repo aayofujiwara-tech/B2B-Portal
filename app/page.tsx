@@ -40,10 +40,13 @@ const FACILITY_OPTIONS = [
   { id: "any", label: "どこでも可" },
 ];
 
+const COMMON_FEATURES = ["保証人不要", "初期費用分割可能", "生活保護受給者対応"];
+
 const FACILITY_INFO: Record<string, {
   name: string;
   access: string;
   structure: string;
+  rent: string;
   features: string[];
   pdf: string;
 }> = {
@@ -51,22 +54,25 @@ const FACILITY_INFO: Record<string, {
     name: "ええすまい塚本",
     access: "JR塚本駅 徒歩7分",
     structure: "鉄骨7階建",
-    features: ["保証人不要", "初期費用分割可", "生活保護対応"],
-    pdf: "/flyers/ええすまい塚本チラシ20260129.pdf",
+    rent: "賃料4.0万円〜",
+    features: COMMON_FEATURES,
+    pdf: "/pdf/flyer-tsukamoto.pdf",
   },
   utajima: {
     name: "ええすまい歌島",
     access: "JR塚本駅 徒歩8分",
     structure: "鉄骨6階建",
-    features: ["生活保護対応", "保証人不要", "24時間管理"],
-    pdf: "/flyers/ええすまい歌島チラシ20260129.pdf",
+    rent: "賃料4.0万円〜",
+    features: COMMON_FEATURES,
+    pdf: "/pdf/flyer-utajima.pdf",
   },
   toyoshin: {
     name: "ええすまい豊新",
     access: "阪急上新庄駅 徒歩10分",
     structure: "鉄骨10階建",
-    features: ["開放感のある住環境", "駅近商店街", "生活利便性◎"],
-    pdf: "/flyers/ええすまい豊新チラシ20260129.pdf",
+    rent: "賃料4.0万円〜",
+    features: COMMON_FEATURES,
+    pdf: "/pdf/flyer-houshin.pdf",
   },
 };
 
@@ -313,7 +319,7 @@ export default function TopPage() {
                   <p className="mb-2 text-sm font-bold text-slate-800">
                     {FACILITY_INFO[facility].name}
                   </p>
-                  <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-2">
+                  <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-3">
                     <span className="flex items-center gap-1.5">
                       <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                       {FACILITY_INFO[facility].access}
@@ -321,6 +327,10 @@ export default function TopPage() {
                     <span className="flex items-center gap-1.5">
                       <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                       {FACILITY_INFO[facility].structure}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {FACILITY_INFO[facility].rent}
                     </span>
                   </div>
                   <div className="mb-3 flex flex-wrap gap-1.5">
