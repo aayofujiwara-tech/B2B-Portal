@@ -8,6 +8,7 @@ import Footer from "@/app/components/Footer";
 import {
   runAssessment,
   addAssessmentLog,
+  sendAssessmentToGAS,
   consumeSlot,
   getDiseaseNotes,
   getFacilityStrengths,
@@ -69,6 +70,26 @@ function ResultContent() {
       result: assessmentResult.status,
       reason: assessmentResult.reasons.join("; "),
       triggerFlags: assessmentResult.triggerFlags,
+    });
+
+    // バックグラウンドでGASへ判定ログを即時送信（UXをブロックしない）
+    const resultLabel =
+      assessmentResult.status === "acceptable"
+        ? "受入可能"
+        : assessmentResult.status === "safety_risk"
+          ? "要慎重検討（安全リスク）"
+          : "要相談";
+    sendAssessmentToGAS({
+      facilityName:
+        facility === "any"
+          ? "どこでも可"
+          : FACILITY_LABELS[facility as FacilityId] || facility,
+      result: resultLabel,
+      disease,
+      adl,
+      dementiaLevel: dementiaLevel || undefined,
+      welfare,
+      budget,
     });
 
     if (assessmentResult.status === "acceptable" || assessmentResult.status === "safety_risk") {

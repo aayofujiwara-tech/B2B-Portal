@@ -70,7 +70,9 @@ function doPost(e) {
       body.isRepeater ? "はい" : "いいえ",
     ]);
 
-    // 2. 判定ログシートへも記録（受付に紐づく判定データ）
+    // 2. 判定ログシートへの補完記録
+    // 判定時に source="direct" で既に記録済みのため、受付時は重複計上を避け
+    // 「申込に至った」ことだけを補完する（source="booking_linked"）
     if (assessment && assessment.status) {
       recordAssessmentLog(ss, {
         facilityName: body.facilityName || "",
@@ -82,7 +84,7 @@ function doPost(e) {
         budget: assessment.budget || "",
         reason: assessment.reason || "",
         isRepeater: body.isRepeater ? "はい" : "いいえ",
-        source: "booking",
+        source: "booking_linked",
       });
     }
 

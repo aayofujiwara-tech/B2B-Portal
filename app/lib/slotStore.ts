@@ -341,6 +341,53 @@ export function saveNotificationEmails(emails: string[]): void {
   localStorage.setItem(NOTIFICATION_EMAILS_KEY, JSON.stringify(emails));
 }
 
+// --- Assessment GAS送信 (判定即時記録) ---
+
+let _lastAssessmentFingerprint = "";
+
+export async function sendAssessmentToGAS(input: {
+  facilityName: string;
+  result: string;
+  disease: string;
+  adl: string;
+  dementiaLevel?: string;
+  welfare?: boolean;
+  budget: string;
+}): Promise<void> {
+  // 重複排除: 同一パラメータの連続送信をスキップ
+  const fingerprint = JSON.stringify(input);
+  if (fingerprint === _lastAssessmentFingerprint) {
+    console.log("[assessment-gas] 重複スキップ");
+    return;
+  }
+  _lastAssessmentFingerprint = fingerprint;
+
+  try {
+    await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "assessment",
+        body: {
+          facilityName: input.facilityName,
+          result: input.result,
+          disease: input.disease,
+          adl: input.adl,
+          dementiaLevel: input.dementiaLevel || "",
+          welfare: input.welfare ? "はい" : "いいえ",
+          budget: input.budget,
+          reason: "",
+          isRepeater: "",
+          source: "direct",
+        },
+      }),
+    });
+    console.log("[assessment-gas] 判定ログ送信成功");
+  } catch (err) {
+    console.error("[assessment-gas] 送信エラー:", err);
+  }
+}
+
 // --- Booking Notification Service (GAS連携) ---
 
 export interface BookingNotificationPayload {
