@@ -126,7 +126,7 @@ function ResultContent() {
     >
       {/* Result Card */}
       <div
-        className={`mb-6 rounded-xl border-2 p-6 text-center ${
+        className={`mb-6 rounded-xl border-2 p-4 text-center sm:p-6 ${
           isAcceptable
             ? "border-emerald-200 bg-emerald-50"
             : "border-amber-200 bg-amber-50"
@@ -183,13 +183,13 @@ function ResultContent() {
 
       {/* 面談必須の注意書き */}
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-        <p className="text-xs text-blue-800">
+        <p className="text-sm text-blue-800 sm:text-xs">
           ※ ご入居には担当：生田との面談（対面/オンライン）が必要です。面談では居室の詳細やケア体制をご確認いただけます。
         </p>
       </div>
 
       {/* Details */}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-800">判定詳細</h3>
         <ul className="space-y-2">
           {result.reasons.map((reason, i) => (
@@ -203,7 +203,7 @@ function ResultContent() {
 
       {/* 専門スタッフからの補足 */}
       {diseaseNotes.length > 0 && (
-        <div className="mb-6 rounded-xl border border-teal-200 bg-teal-50 p-5 shadow-sm">
+        <div className="mb-6 rounded-xl border border-teal-200 bg-teal-50 p-4 shadow-sm sm:p-5">
           <h3 className="mb-3 text-sm font-bold text-teal-800">
             専門スタッフからの補足
           </h3>
@@ -219,7 +219,7 @@ function ResultContent() {
       )}
 
       {/* 物件の強み（拠点別） */}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-800">
           物件の強み
           {facility !== "any" && FACILITY_LABELS[facility as FacilityId] &&
@@ -236,9 +236,9 @@ function ResultContent() {
       </div>
 
       {/* Input Summary */}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-800">入力内容</h3>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dl className="grid grid-cols-1 gap-y-2 text-sm sm:grid-cols-2 sm:gap-x-4">
           <dt className="text-muted">疾患</dt>
           <dd className="text-slate-700">{disease}</dd>
           <dt className="text-muted">ADL</dt>
@@ -259,7 +259,7 @@ function ResultContent() {
       </div>
 
       {/* 施設チラシ (PDF直リンク) */}
-      <div className="mb-6 rounded-xl border-2 border-amber-200 bg-amber-50 p-5 shadow-sm">
+      <div className="mb-6 rounded-xl border-2 border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-slate-800">
           ご家族説明用チラシ
         </h3>
@@ -287,7 +287,7 @@ function ResultContent() {
                 rel="noopener noreferrer"
                 download
                 onClick={() => trackEvent("flyer_view", "click_flyer_pdf", fid)}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 py-3 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
               >
                 {FACILITY_LABELS[fid]}
               </a>
@@ -354,7 +354,7 @@ export default function ResultPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:py-8">
         <Suspense
           fallback={
             <div className="flex flex-col items-center py-20">

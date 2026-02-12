@@ -142,8 +142,8 @@ export default function BookingPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-4 py-8">
-          <div className="animate-fade-in w-full rounded-xl border-2 border-emerald-200 bg-emerald-50 p-8 text-center">
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-4 py-6 sm:py-8">
+          <div className="animate-fade-in w-full rounded-xl border-2 border-emerald-200 bg-emerald-50 p-5 text-center sm:p-8">
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
               <svg
                 className="h-8 w-8 text-emerald-600"
@@ -191,7 +191,7 @@ export default function BookingPage() {
             </div>
             <a
               href="/"
-              className="inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white transition hover:bg-primary-dark"
+              className="inline-block rounded-lg bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary-dark"
             >
               トップに戻る
             </a>
@@ -206,7 +206,7 @@ export default function BookingPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:py-8">
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold text-slate-800">面談申込</h1>
           <p className="text-sm text-muted">
@@ -216,7 +216,7 @@ export default function BookingPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Contact Info */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-base font-bold text-slate-800">
               ご連絡先
             </h2>
@@ -230,7 +230,7 @@ export default function BookingPage() {
                 value={facilityName}
                 onChange={(e) => setFacilityName(e.target.value)}
                 placeholder="例：〇〇総合病院"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
               />
             </div>
 
@@ -243,7 +243,7 @@ export default function BookingPage() {
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
                 placeholder="例：山田 太郎"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
               />
             </div>
 
@@ -257,7 +257,7 @@ export default function BookingPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="03-XXXX-XXXX"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
                 />
               </div>
               <div>
@@ -269,23 +269,23 @@ export default function BookingPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@hospital.jp"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
                 />
               </div>
             </div>
           </div>
 
           {/* Date & Time Preferences (max 3) */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-4 text-base font-bold text-slate-800">
               面談希望日（最大3つ）
             </h2>
 
             <div className="space-y-3">
               {dateSlots.map((ds, i) => (
-                <div key={i} className="flex items-end gap-2">
+                <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <div className="flex-1">
-                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                    <label className="mb-1 block text-xs font-medium text-slate-700 sm:text-xs">
                       {dateSlots.length > 1 ? `第${i + 1}希望` : "希望日"}{" "}
                       {i === 0 && <span className="text-danger">*</span>}
                     </label>
@@ -298,17 +298,18 @@ export default function BookingPage() {
                         updateDateSlot(i, "date", e.target.value);
                         trackEvent("booking_start", "select_date", e.target.value);
                       }}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
                     />
                   </div>
+                  <div className="flex flex-1 items-end gap-2">
                   <div className="flex-1">
-                    <label className="mb-1 block text-xs font-medium text-slate-700">
+                    <label className="mb-1 block text-xs font-medium text-slate-700 sm:text-xs">
                       時間帯
                     </label>
                     <select
                       value={ds.timeSlot}
                       onChange={(e) => updateDateSlot(i, "timeSlot", e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
                     >
                       {TIME_SLOT_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -321,14 +322,15 @@ export default function BookingPage() {
                     <button
                       type="button"
                       onClick={() => removeDateSlot(i)}
-                      className="mb-0.5 rounded-lg border border-slate-200 p-2.5 text-slate-400 transition hover:border-red-300 hover:text-red-500"
+                      className="mb-0.5 flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition hover:border-red-300 hover:text-red-500"
                       aria-label="削除"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -337,7 +339,7 @@ export default function BookingPage() {
               <button
                 type="button"
                 onClick={addDateSlot}
-                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                className="mt-3 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-primary transition hover:bg-primary/5 active:bg-primary/10"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -348,7 +350,7 @@ export default function BookingPage() {
           </div>
 
           {/* Notes */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               備考・ご要望
             </label>
@@ -357,7 +359,7 @@ export default function BookingPage() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="ご質問やご要望がございましたらご記入ください"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
             />
           </div>
 

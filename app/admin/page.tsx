@@ -135,7 +135,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 flex gap-1 rounded-lg bg-slate-100 p-1">
+        <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:flex">
           {[
             { key: "slots" as const, label: "面談枠管理" },
             { key: "assessments" as const, label: `判定ログ（${assessmentLogs.length}）` },
@@ -145,7 +145,7 @@ export default function AdminPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
+              className={`flex-1 rounded-md py-2.5 text-xs font-medium transition sm:py-2 sm:text-sm ${
                 activeTab === tab.key
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-muted hover:text-slate-600"
@@ -172,7 +172,7 @@ export default function AdminPage() {
                   </h2>
 
                   {/* Stats */}
-                  <div className="mb-3 grid grid-cols-4 gap-3">
+                  <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                     <div className="rounded-lg bg-slate-50 p-3 text-center">
                       <p className="text-xl font-bold text-primary">{sc.totalSlots}</p>
                       <p className="text-xs text-muted">総枠</p>
@@ -229,12 +229,12 @@ export default function AdminPage() {
                             [id]: Math.max(1, parseInt(e.target.value) || 1),
                           }))
                         }
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2 sm:text-sm"
                       />
                     </div>
                     <button
                       onClick={() => handleReload(id)}
-                      className="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+                      className="rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98] sm:py-2"
                     >
                       リロード
                     </button>
@@ -273,7 +273,7 @@ export default function AdminPage() {
                         {new Date(log.timestamp).toLocaleString("ja-JP")}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
+                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-5 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
                         <span className="text-muted">疾患:</span>{" "}
                         <span className="font-medium">{log.disease}</span>
@@ -296,7 +296,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {log.reason && (
-                      <p className="mt-2 text-xs text-muted">{log.reason}</p>
+                      <p className="mt-2 text-sm text-muted sm:text-xs">{log.reason}</p>
                     )}
                   </div>
                 ))}
@@ -327,7 +327,7 @@ export default function AdminPage() {
                         {new Date(log.timestamp).toLocaleString("ja-JP")}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-4 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
                         <span className="text-muted">担当者:</span>{" "}
                         <span className="font-medium">{log.contactName}</span>
@@ -350,7 +350,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {log.notes && (
-                      <p className="mt-2 text-xs text-muted">
+                      <p className="mt-2 text-sm text-muted sm:text-xs">
                         備考: {log.notes}
                       </p>
                     )}
@@ -372,13 +372,13 @@ export default function AdminPage() {
               </p>
 
               {/* Add email form */}
-              <div className="mb-5 flex gap-2">
+              <div className="mb-5 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="email"
                   value={newEmail}
                   onChange={(e) => { setNewEmail(e.target.value); setEmailError(""); }}
                   placeholder="example@company.com"
-                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -415,7 +415,7 @@ export default function AdminPage() {
                     setNotifyEmails(updated);
                     setNewEmail("");
                   }}
-                  className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98]"
+                  className="rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98] sm:py-2.5"
                 >
                   追加
                 </button>
@@ -444,7 +444,7 @@ export default function AdminPage() {
                           saveNotificationEmails(updated);
                           setNotifyEmails(updated);
                         }}
-                        className="rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                        className="flex h-[44px] w-[44px] items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-500"
                         aria-label="削除"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

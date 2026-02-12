@@ -23,7 +23,7 @@ export default function Header() {
             <div className="text-sm font-bold leading-tight text-slate-800">
               居室サブリース
             </div>
-            <div className="text-[10px] leading-tight text-muted">
+            <div className="hidden text-[10px] leading-tight text-muted sm:block">
               MSW向け受入判定ポータル
             </div>
           </div>
@@ -39,7 +39,7 @@ export default function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-md px-2 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-slate-600 hover:bg-slate-100"

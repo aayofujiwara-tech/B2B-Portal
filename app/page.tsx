@@ -120,7 +120,7 @@ export default function TopPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:py-8">
         {/* Hero Section */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold text-slate-800">
@@ -159,11 +159,11 @@ export default function TopPage() {
         )}
 
         {/* Facility Selector (top-level, before form) */}
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <h2 className="mb-4 text-base font-bold text-slate-800">
             拠点を選択
           </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-2">
             {FACILITY_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
@@ -186,11 +186,11 @@ export default function TopPage() {
 
         {/* Facility Info Card (appears when a specific facility is selected) */}
         {facility && facility !== "any" && FACILITY_INFO[facility] && (
-          <div className="mb-6 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-white p-5 shadow-sm">
+          <div className="mb-6 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-white p-4 shadow-sm sm:p-5">
             <p className="mb-2.5 text-base font-bold text-slate-800">
               {FACILITY_INFO[facility].name}
             </p>
-            <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-3">
+            <div className="mb-3 grid grid-cols-1 gap-1.5 text-sm text-slate-600 sm:grid-cols-3 sm:text-xs">
               <span className="flex items-center gap-1.5">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 {FACILITY_INFO[facility].access}
@@ -224,7 +224,7 @@ export default function TopPage() {
               target="_blank"
               rel="noopener noreferrer"
               download
-              className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-amber-600 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-amber-600 active:scale-[0.98] sm:inline-flex sm:w-auto"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -236,7 +236,7 @@ export default function TopPage() {
 
         {/* Assessment Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <h2 className="mb-5 text-base font-bold text-slate-800">
               受入確認フォーム
             </h2>
@@ -252,7 +252,7 @@ export default function TopPage() {
                   setDisease(e.target.value);
                   trackEvent("assessment_start", "select_disease", e.target.value);
                 }}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
               >
                 <option value="">選択してください</option>
                 {DISEASE_OPTIONS.map((d) => (
@@ -268,7 +268,7 @@ export default function TopPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 ADL（日常生活動作）
               </label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-2">
                 {ADL_OPTIONS.map((option) => (
                   <button
                     key={option}
@@ -294,7 +294,7 @@ export default function TopPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 性別
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2.5 sm:gap-2">
                 {GENDER_OPTIONS.map((option) => (
                   <button
                     key={option}
@@ -320,7 +320,7 @@ export default function TopPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 ご予算（月額目安）
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-2">
                 {BUDGET_OPTIONS.map((option) => (
                   <button
                     key={option}
@@ -346,7 +346,7 @@ export default function TopPage() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 ご希望の入居時期
               </label>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-2">
                 {TIMING_OPTIONS.map((option) => (
                   <button
                     key={option}
@@ -374,7 +374,7 @@ export default function TopPage() {
                   type="checkbox"
                   checked={welfare}
                   onChange={(e) => setWelfare(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-primary accent-primary"
+                  className="h-5 w-5 rounded border-slate-300 text-primary accent-primary sm:h-4 sm:w-4"
                 />
                 <span className="text-sm font-medium text-slate-700">
                   生活保護受給あり

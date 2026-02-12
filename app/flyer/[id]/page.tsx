@@ -69,7 +69,7 @@ export default function FlyerPage() {
             <Link
               key={fid}
               href={`/flyer/${fid}`}
-              className={`flex-1 rounded-md py-2 text-center text-sm font-medium transition ${
+              className={`flex-1 rounded-md py-2.5 text-center text-xs font-medium transition sm:py-2 sm:text-sm ${
                 fid === facilityId
                   ? "bg-white text-slate-800 shadow-sm"
                   : "text-muted hover:text-slate-600"
@@ -85,7 +85,7 @@ export default function FlyerPage() {
           <embed
             src={pdfPath}
             type="application/pdf"
-            className="h-[80vh] w-full"
+            className="h-[60vh] w-full sm:h-[80vh]"
           />
         </div>
 
@@ -97,7 +97,7 @@ export default function FlyerPage() {
           <a
             href={pdfPath}
             download
-            className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10"
+            className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition hover:bg-primary/10"
           >
             <svg
               className="h-4 w-4"
