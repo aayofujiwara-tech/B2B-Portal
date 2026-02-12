@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="mx-auto max-w-5xl px-4 text-center">
         <p className="text-sm text-muted sm:text-xs">
           お急ぎの方は直接お電話ください:{" "}
-          <a href="tel:03XXXXXXXX" className="font-medium text-slate-700 underline hover:text-primary">03-XXXX-XXXX</a>{" "}
+          <a href="tel:07032445497" className="font-medium text-slate-700 underline hover:text-primary">070-3244-5497</a>{" "}
           （担当：生田）
         </p>
         <p className="mt-2 text-xs text-gray-400">

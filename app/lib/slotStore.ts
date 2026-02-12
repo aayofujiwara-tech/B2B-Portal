@@ -19,10 +19,11 @@ export interface AssessmentLog {
   timestamp: string;
   disease: string;
   adl: string;
+  dementiaLevel?: string;
   gender: string;
   budget: string;
   timing: string;
-  result: "acceptable" | "consultation";
+  result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
   triggerFlags?: string[];
 }
@@ -318,7 +319,12 @@ export async function sendBookingNotification(
       notes: booking.notes,
       assessmentResult: latest
         ? {
-            status: latest.result === "acceptable" ? "受入可能" : "要相談",
+            status:
+              latest.result === "acceptable"
+                ? "受入可能"
+                : latest.result === "safety_risk"
+                  ? "要慎重検討（安全リスク）"
+                  : "要相談",
             disease: latest.disease,
             adl: latest.adl,
             reason: latest.reason || "",
@@ -356,6 +362,7 @@ export async function sendBookingNotification(
 export interface AssessmentInput {
   disease: string;
   adl: string;
+  dementiaLevel?: string;
   gender: string;
   budget: string;
   timing: string;
@@ -364,7 +371,7 @@ export interface AssessmentInput {
 }
 
 export interface AssessmentResult {
-  status: "acceptable" | "consultation";
+  status: "acceptable" | "consultation" | "safety_risk";
   message: string;
   reasons: string[];
   triggerFlags: string[];
@@ -374,6 +381,27 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   const reasons: string[] = [];
   const triggerFlags: string[] = [];
   let needsConsultation = false;
+
+  // Safety risk check — ADL高（自立/一部介助）+ 認知症重度 → 徘徊リスク
+  const isHighAdl = input.adl === "自立" || input.adl === "一部介助";
+  const isSevereDementia =
+    input.disease.includes("認知症") &&
+    input.dementiaLevel?.includes("重度");
+
+  if (isHighAdl && isSevereDementia) {
+    triggerFlags.push("safety_risk_wandering");
+    return {
+      status: "safety_risk",
+      message: "要慎重検討（安全上のリスクあり）",
+      reasons: [
+        "本物件は一般居室を活用した住まいであり、施設のような物理的な施錠管理（外出制限）がございません。",
+        "近隣に交通量の多い幹線道路があり、無断外出時の交通事故リスクを完全に排除できません。",
+        "GPS追跡端末を携行いただいた場合でも、突発的な事故そのものを未然に防ぐことは困難です。",
+        "入居者様の「命の安全」を最優先に考え、事前の面談を通じてリスクの許容範囲を慎重に協議させていただきます。",
+      ],
+      triggerFlags: ["safety_risk_wandering"],
+    };
+  }
 
   // Toyoshin + welfare check
   if (input.facility === "toyoshin" && input.welfare) {

@@ -123,6 +123,15 @@ function buildEmailBody(body, dates, assessment) {
     if (assessment.disease) lines.push("  疾患　　：" + assessment.disease);
     if (assessment.adl) lines.push("  ADL　　 ：" + assessment.adl);
     if (assessment.reason) lines.push("  補足　　：" + assessment.reason);
+
+    // 安全リスク判定時の特別警告
+    if (assessment.status === "要慎重検討（安全リスク）") {
+      lines.push("");
+      lines.push("  ⚠️ 【安全リスク警告】");
+      lines.push("  ADLが高く重度の徘徊症状があるケースです。");
+      lines.push("  幹線道路近接による交通事故リスクがあり、");
+      lines.push("  事前面談での慎重なリスク協議が必要です。");
+    }
   } else {
     lines.push("  （判定情報なし ― ダイレクト受付）");
   }

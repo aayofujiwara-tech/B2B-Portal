@@ -24,6 +24,11 @@ const DISEASE_OPTIONS = [
 ];
 
 const ADL_OPTIONS = ["自立", "一部介助", "半介助", "全介助"];
+const DEMENTIA_LEVEL_OPTIONS = [
+  "軽度（見守り程度）",
+  "中等度（日常的な支援が必要）",
+  "重度（徘徊・BPSD顕著）",
+];
 const GENDER_OPTIONS = ["男性", "女性"];
 const BUDGET_OPTIONS = ["〜8万円", "8〜12万円", "12〜15万円", "15万円以上"];
 const TIMING_OPTIONS = [
@@ -81,6 +86,7 @@ export default function TopPage() {
   const router = useRouter();
   const [disease, setDisease] = useState("");
   const [adl, setAdl] = useState("");
+  const [dementiaLevel, setDementiaLevel] = useState("");
   const [gender, setGender] = useState("");
   const [budget, setBudget] = useState("");
   const [timing, setTiming] = useState("");
@@ -120,6 +126,7 @@ export default function TopPage() {
       timing,
       facility,
       welfare: welfare ? "1" : "0",
+      ...(dementiaLevel ? { dementiaLevel } : {}),
     });
 
     setTimeout(() => {
@@ -141,7 +148,7 @@ export default function TopPage() {
             24時間対応 ・ 紹介業者、MSW向けポータル
           </p>
           <p className="mt-2 text-xs text-slate-500">
-            ※ ご入居には担当：生田との面談が必要です
+            ※ ご入居には担当：生田、<strong>看護師</strong>との面談が必要です
           </p>
         </div>
 
@@ -271,6 +278,7 @@ export default function TopPage() {
                 value={disease}
                 onChange={(e) => {
                   setDisease(e.target.value);
+                  if (e.target.value !== "認知症") setDementiaLevel("");
                   trackEvent("assessment_start", "select_disease", e.target.value);
                 }}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
@@ -283,6 +291,34 @@ export default function TopPage() {
                 ))}
               </select>
             </div>
+
+            {/* Dementia Severity (conditional) */}
+            {disease === "認知症" && (
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  認知症の程度
+                </label>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-2">
+                  {DEMENTIA_LEVEL_OPTIONS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        setDementiaLevel(option);
+                        trackEvent("assessment_start", "select_dementia_level", option);
+                      }}
+                      className={`rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                        dementiaLevel === option
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ADL */}
             <div className="mb-5">

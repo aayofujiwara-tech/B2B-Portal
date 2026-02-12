@@ -264,10 +264,16 @@ export default function AdminPage() {
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           log.result === "acceptable"
                             ? "bg-emerald-50 text-emerald-700"
-                            : "bg-amber-50 text-amber-700"
+                            : log.result === "safety_risk"
+                              ? "bg-red-50 text-red-700"
+                              : "bg-amber-50 text-amber-700"
                         }`}
                       >
-                        {log.result === "acceptable" ? "受入可能" : "要相談"}
+                        {log.result === "acceptable"
+                          ? "受入可能"
+                          : log.result === "safety_risk"
+                            ? "要慎重検討"
+                            : "要相談"}
                       </span>
                       <span className="text-xs text-muted">
                         {new Date(log.timestamp).toLocaleString("ja-JP")}

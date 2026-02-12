@@ -36,6 +36,7 @@ function ResultContent() {
 
   const disease = searchParams.get("disease") || "";
   const adl = searchParams.get("adl") || "";
+  const dementiaLevel = searchParams.get("dementiaLevel") || "";
   const gender = searchParams.get("gender") || "";
   const budget = searchParams.get("budget") || "";
   const timing = searchParams.get("timing") || "";
@@ -50,6 +51,7 @@ function ResultContent() {
     const assessmentResult = runAssessment({
       disease,
       adl,
+      dementiaLevel: dementiaLevel || undefined,
       gender,
       budget,
       timing,
@@ -60,6 +62,7 @@ function ResultContent() {
     addAssessmentLog({
       disease,
       adl,
+      dementiaLevel: dementiaLevel || undefined,
       gender,
       budget,
       timing,
@@ -68,7 +71,7 @@ function ResultContent() {
       triggerFlags: assessmentResult.triggerFlags,
     });
 
-    if (assessmentResult.status === "acceptable") {
+    if (assessmentResult.status === "acceptable" || assessmentResult.status === "safety_risk") {
       consumeSlot(facility);
     }
 
@@ -129,25 +132,80 @@ function ResultContent() {
   }
 
   const isAcceptable = result.status === "acceptable";
+  const isSafetyRisk = result.status === "safety_risk";
 
   return (
     <div
       className={`transition-all duration-500 ${showResult ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
     >
+      {/* Safety Risk Alert — highest priority, shows before everything else */}
+      {isSafetyRisk && (
+        <div className="mb-6 rounded-xl border-2 border-red-300 bg-red-50 p-4 shadow-sm sm:p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-2xl" role="img" aria-label="warning">⚠️</span>
+            <h2 className="text-base font-bold leading-tight text-red-800 sm:text-lg">
+              【安全管理に関する重要なお知らせ】
+            </h2>
+          </div>
+          <p className="mb-3 text-sm leading-relaxed text-red-800">
+            本物件は一般居室を活用した住まいであり、施設のような物理的な施錠管理（外出制限）がございません。
+          </p>
+          <p className="mb-3 text-sm font-bold leading-relaxed text-red-900">
+            特に、以下の理由から「ADLが高く、重度の徘徊症状がある方」については、安全確保が極めて困難な状況です。
+          </p>
+          <ol className="mb-3 list-inside list-decimal space-y-2 text-sm leading-relaxed text-red-800">
+            <li>
+              <strong>物理的制約：</strong>近隣に交通量の多い幹線道路があり、無断外出時の<span className="font-bold underline decoration-red-400 decoration-2">交通事故リスク</span>を完全に排除できません。
+            </li>
+            <li>
+              <strong>対策の限界：</strong>GPS追跡端末を携行いただいた場合でも、現在地の把握は可能ですが、突発的な事故そのものを未然に防ぐことは困難です。
+            </li>
+          </ol>
+          <div className="rounded-lg border border-red-200 bg-white/60 p-3">
+            <p className="mb-1 text-sm font-bold text-red-800">
+              【今後の対応】
+            </p>
+            <p className="text-sm leading-relaxed text-red-700">
+              入居者様の「命の安全」を最優先に考え、事前の面談を通じてリスクの許容範囲を慎重に協議させていただきます。まずは事前面談（オンライン/対面）の設定をお願いいたします。
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Result Card */}
       <div
         className={`mb-6 rounded-xl border-2 p-4 text-center sm:p-6 ${
-          isAcceptable
-            ? "border-emerald-200 bg-emerald-50"
-            : "border-amber-200 bg-amber-50"
+          isSafetyRisk
+            ? "border-red-200 bg-red-50"
+            : isAcceptable
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-amber-200 bg-amber-50"
         }`}
       >
         <div
           className={`mb-3 inline-flex h-16 w-16 items-center justify-center rounded-full text-3xl ${
-            isAcceptable ? "bg-emerald-100" : "bg-amber-100"
+            isSafetyRisk
+              ? "bg-red-100"
+              : isAcceptable
+                ? "bg-emerald-100"
+                : "bg-amber-100"
           }`}
         >
-          {isAcceptable ? (
+          {isSafetyRisk ? (
+            <svg
+              className="h-8 w-8 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.5}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          ) : isAcceptable ? (
             <svg
               className="h-8 w-8 text-emerald-600"
               fill="none"
@@ -178,23 +236,25 @@ function ResultContent() {
           )}
         </div>
         <h2
-          className={`mb-1 text-xl font-bold ${isAcceptable ? "text-emerald-800" : "text-amber-800"}`}
+          className={`mb-1 text-xl font-bold ${isSafetyRisk ? "text-red-800" : isAcceptable ? "text-emerald-800" : "text-amber-800"}`}
         >
           {result.message}
         </h2>
         <p
-          className={`text-sm ${isAcceptable ? "text-emerald-600" : "text-amber-600"}`}
+          className={`text-sm ${isSafetyRisk ? "text-red-600" : isAcceptable ? "text-emerald-600" : "text-amber-600"}`}
         >
-          {isAcceptable
-            ? "条件に概ね合致しています。スムーズな入居に向けて、担当：生田との面談をお申し込みください。"
-            : "詳細な調整が可能です。お電話または面談にて、最適な受入プランをご提案します。面談をお申し込みください。"}
+          {isSafetyRisk
+            ? "安全面のリスク評価が必要です。担当：生田、看護師との事前面談をお申し込みください。"
+            : isAcceptable
+              ? "条件に概ね合致しています。スムーズな入居に向けて、担当：生田、看護師との面談をお申し込みください。"
+              : "詳細な調整が可能です。お電話または面談にて、最適な受入プランをご提案します。面談をお申し込みください。"}
         </p>
       </div>
 
       {/* 面談必須の注意書き */}
       <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
         <p className="text-sm text-blue-800 sm:text-xs">
-          ※ ご入居には担当：生田との面談（対面/オンライン）が必要です。面談では居室の詳細やケア体制をご確認いただけます。
+          ※ ご入居には担当：生田、<strong>看護師</strong>との面談（対面/オンライン）が必要です。面談では居室の詳細やケア体制をご確認いただけます。
         </p>
       </div>
 
@@ -262,6 +322,12 @@ function ResultContent() {
           <dd className="text-slate-700">{disease}</dd>
           <dt className="text-muted">ADL</dt>
           <dd className="text-slate-700">{adl}</dd>
+          {dementiaLevel && (
+            <>
+              <dt className="text-muted">認知症の程度</dt>
+              <dd className="text-slate-700">{dementiaLevel}</dd>
+            </>
+          )}
           <dt className="text-muted">性別</dt>
           <dd className="text-slate-700">{gender}</dd>
           <dt className="text-muted">予算</dt>
@@ -316,7 +382,37 @@ function ResultContent() {
       </div>
 
       {/* CTA */}
-      {isAcceptable ? (
+      {isSafetyRisk ? (
+        <div className="flex flex-col gap-3">
+          <a
+            href="tel:07032445497"
+            onClick={() =>
+              trackEvent("consultation_call", "click_phone_from_safety_risk")
+            }
+            className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-red-700 active:scale-[0.98]"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            070-3244-5497（生田）に今すぐ電話する
+          </a>
+          <Link
+            href="/booking"
+            onClick={() =>
+              trackEvent("booking_start", "click_booking_from_safety_risk")
+            }
+            className="flex flex-1 items-center justify-center rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-dark active:scale-[0.98]"
+          >
+            事前面談（オンライン/対面）を申し込む
+          </Link>
+          <Link
+            href="/"
+            className="flex flex-1 items-center justify-center rounded-xl border border-slate-300 py-3.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          >
+            別の条件で再判定
+          </Link>
+        </div>
+      ) : isAcceptable ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/booking"
@@ -337,7 +433,7 @@ function ResultContent() {
       ) : (
         <div className="flex flex-col gap-3">
           <a
-            href="tel:03XXXXXXXX"
+            href="tel:07032445497"
             onClick={() =>
               trackEvent("consultation_call", "click_phone_from_result")
             }
@@ -346,7 +442,7 @@ function ResultContent() {
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
-            生田に今すぐ電話する
+            070-3244-5497（生田）に今すぐ電話する
           </a>
           <Link
             href="/booking"

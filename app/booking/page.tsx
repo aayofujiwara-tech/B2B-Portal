@@ -163,7 +163,7 @@ export default function BookingPage() {
               面談の受付を完了しました
             </h2>
             <p className="mb-4 text-sm text-emerald-600">
-              現在は「仮受付」の状態です。担当の生田より、本日または翌営業日中に、メールまたはお電話にて日程確定のご連絡を差し上げます。今しばらくお待ちください。
+              現在は「仮受付」の状態です。担当の生田、または看護師より、本日または翌営業日中に、メールまたはお電話にて日程確定のご連絡を差し上げます。今しばらくお待ちください。
             </p>
             <div className="mb-6 rounded-lg bg-white p-4 text-left text-sm">
               <dl className="space-y-2">
@@ -210,7 +210,7 @@ export default function BookingPage() {
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-2xl font-bold text-slate-800">面談申込</h1>
           <p className="text-sm text-muted">
-            担当：生田 ｜ ご都合の良い日時をお選びください
+            担当：生田、看護師 ｜ ご都合の良い日時をお選びください
           </p>
         </div>
 
