@@ -11,15 +11,15 @@ import {
 } from "@/app/lib/slotStore";
 
 const FLYER_FILES: Record<FacilityId, string> = {
-  tsukamoto: "/flyers/tsukamoto.pdf",
-  toyoshin: "/flyers/toyoshin.pdf",
-  utajima: "/flyers/utajima.pdf",
+  tsukamoto: "/flyers/ええすまい塚本チラシ20260129.pdf",
+  toyoshin: "/flyers/ええすまい豊新チラシ20260129.pdf",
+  utajima: "/flyers/ええすまい歌島チラシ20260129.pdf",
 };
 
 const FLYER_DESCRIPTIONS: Record<FacilityId, string> = {
-  tsukamoto: "JR塚本駅 徒歩圏内・保証人不要・生活保護対応",
-  toyoshin: "阪急上新庄駅利用・10階建・開放感のある住環境",
-  utajima: "JR塚本駅 徒歩圏内・初期費用分割相談可",
+  tsukamoto: "JR塚本駅 徒歩7分 / 鉄骨7階建 / 保証人不要・初期費用分割可",
+  toyoshin: "阪急上新庄駅 徒歩10分 / 鉄骨10階建 / 開放感のある住環境",
+  utajima: "JR塚本駅 徒歩8分 / 鉄骨6階建 / 生活保護対応・保証人不要",
 };
 
 export default function FlyerPage() {

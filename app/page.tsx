@@ -40,6 +40,36 @@ const FACILITY_OPTIONS = [
   { id: "any", label: "どこでも可" },
 ];
 
+const FACILITY_INFO: Record<string, {
+  name: string;
+  access: string;
+  structure: string;
+  features: string[];
+  pdf: string;
+}> = {
+  tsukamoto: {
+    name: "ええすまい塚本",
+    access: "JR塚本駅 徒歩7分",
+    structure: "鉄骨7階建",
+    features: ["保証人不要", "初期費用分割可", "生活保護対応"],
+    pdf: "/flyers/ええすまい塚本チラシ20260129.pdf",
+  },
+  utajima: {
+    name: "ええすまい歌島",
+    access: "JR塚本駅 徒歩8分",
+    structure: "鉄骨6階建",
+    features: ["生活保護対応", "保証人不要", "24時間管理"],
+    pdf: "/flyers/ええすまい歌島チラシ20260129.pdf",
+  },
+  toyoshin: {
+    name: "ええすまい豊新",
+    access: "阪急上新庄駅 徒歩10分",
+    structure: "鉄骨10階建",
+    features: ["開放感のある住環境", "駅近商店街", "生活利便性◎"],
+    pdf: "/flyers/ええすまい豊新チラシ20260129.pdf",
+  },
+};
+
 export default function TopPage() {
   const router = useRouter();
   const [disease, setDisease] = useState("");
@@ -277,16 +307,44 @@ export default function TopPage() {
                   </button>
                 ))}
               </div>
-              {facility && facility !== "any" && (
-                <Link
-                  href={`/flyer/${facility}`}
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                >
-                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  {FACILITY_OPTIONS.find((o) => o.id === facility)?.label}の物件チラシを見る
-                </Link>
+              {/* Facility Info Card */}
+              {facility && facility !== "any" && FACILITY_INFO[facility] && (
+                <div className="mt-3 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-white p-4">
+                  <p className="mb-2 text-sm font-bold text-slate-800">
+                    {FACILITY_INFO[facility].name}
+                  </p>
+                  <div className="mb-3 grid grid-cols-1 gap-1.5 text-xs text-slate-600 sm:grid-cols-2">
+                    <span className="flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      {FACILITY_INFO[facility].access}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                      {FACILITY_INFO[facility].structure}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    {FACILITY_INFO[facility].features.map((f) => (
+                      <span
+                        key={f}
+                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                      >
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                  <a
+                    href={FACILITY_INFO[facility].pdf}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-white px-3 py-2 text-xs font-bold text-primary shadow-sm transition hover:bg-primary/5"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    物件チラシ(PDF)を開く
+                  </a>
+                </div>
               )}
             </div>
           </div>
