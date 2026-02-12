@@ -11,6 +11,8 @@ import {
   consumeSlot,
   getDiseaseNotes,
   getFacilityStrengths,
+  getSlotConfig,
+  FACILITY_IDS,
   FACILITY_LABELS,
   type AssessmentResult,
   type DiseaseNote,
@@ -29,6 +31,7 @@ function ResultContent() {
   const [result, setResult] = useState<AssessmentResult | null>(null);
   const [diseaseNotes, setDiseaseNotes] = useState<DiseaseNote[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [isFacilityFull, setIsFacilityFull] = useState(false);
   const processedRef = useRef(false);
 
   const disease = searchParams.get("disease") || "";
@@ -71,6 +74,13 @@ function ResultContent() {
 
     setResult(assessmentResult);
     setDiseaseNotes(getDiseaseNotes(disease));
+
+    // Check if the selected facility is full
+    if (facility && facility !== "any" && FACILITY_IDS.includes(facility as FacilityId)) {
+      const sc = getSlotConfig(facility as FacilityId);
+      setIsFacilityFull(Math.max(0, sc.totalSlots - sc.usedSlots) === 0);
+    }
+
     trackEvent("result_view", "view_result", assessmentResult.status);
 
     const timer = setTimeout(() => setShowResult(true), 300);
@@ -187,6 +197,15 @@ function ResultContent() {
           ※ ご入居には担当：生田との面談（対面/オンライン）が必要です。面談では居室の詳細やケア体制をご確認いただけます。
         </p>
       </div>
+
+      {/* 満室注意 */}
+      {isFacilityFull && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm font-medium leading-relaxed text-red-700 sm:text-xs sm:leading-relaxed">
+            ※現在、該当施設は満室となっております。日程調整のご連絡の際に、最短での空き予定や近隣施設（塚本・歌島等）へのご案内を優先的にさせていただきます。
+          </p>
+        </div>
+      )}
 
       {/* Details */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">

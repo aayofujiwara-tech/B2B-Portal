@@ -71,7 +71,7 @@ export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
   };
 
   const getIndicatorColor = (): string => {
-    if (isAdjusting) return "bg-amber-400 animate-pulse-slow";
+    if (isAdjusting) return "bg-red-500 animate-pulse-slow";
     if (ratio >= 0.8) return "bg-red-500";
     if (ratio >= 0.6) return "bg-amber-500";
     return "bg-emerald-500";
@@ -95,8 +95,8 @@ export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
           </h3>
         </div>
         {isAdjusting ? (
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-            次回の枠を調整中
+          <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+            満室
           </span>
         ) : (
           <span className={`text-lg font-bold ${getRemainingColor()}`}>
@@ -132,7 +132,11 @@ export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        {ratio >= 0.6 && !isAdjusting ? (
+        {isAdjusting ? (
+          <p className="text-xs font-medium leading-tight text-red-600">
+            ※ キャンセル待ち・空き予定の確認は可能です
+          </p>
+        ) : ratio >= 0.6 ? (
           <p className="text-xs font-medium text-amber-600">
             ※ 優先面談枠が残りわずかです
           </p>

@@ -135,7 +135,7 @@ export function reloadSlots(totalSlots: number, facilityId: FacilityId): void {
     usedSlots: 0,
     lastReloadDate: new Date().toISOString().split("T")[0],
     lastReloadTimestamp: new Date().toISOString(),
-    status: "available",
+    status: totalSlots > 0 ? "available" : "adjusting",
   };
   saveSlotConfig(config, facilityId);
 }

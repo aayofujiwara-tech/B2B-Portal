@@ -220,13 +220,13 @@ export default function AdminPage() {
                       </label>
                       <input
                         type="number"
-                        min={1}
+                        min={0}
                         max={20}
                         value={newTotals[id]}
                         onChange={(e) =>
                           setNewTotals((prev) => ({
                             ...prev,
-                            [id]: Math.max(1, parseInt(e.target.value) || 1),
+                            [id]: Math.max(0, parseInt(e.target.value) || 0),
                           }))
                         }
                         className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2 sm:text-sm"

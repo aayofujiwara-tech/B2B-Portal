@@ -7,6 +7,7 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
+import { getSlotConfig, FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
 import { type SavedContact, getSavedContact } from "@/app/booking/page";
 
 const DISEASE_OPTIONS = [
@@ -87,10 +88,20 @@ export default function TopPage() {
   const [welfare, setWelfare] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
+  const [facilityRemaining, setFacilityRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     setSavedContact(getSavedContact());
   }, []);
+
+  useEffect(() => {
+    if (facility && facility !== "any" && FACILITY_IDS.includes(facility as FacilityId)) {
+      const sc = getSlotConfig(facility as FacilityId);
+      setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
+    } else {
+      setFacilityRemaining(null);
+    }
+  }, [facility]);
 
   const isFormValid = disease && adl && gender && budget && timing && facility;
 
@@ -190,6 +201,16 @@ export default function TopPage() {
             <p className="mb-2.5 text-base font-bold text-slate-800">
               {FACILITY_INFO[facility].name}
             </p>
+            {facilityRemaining === 0 && (
+              <div className="mb-3 rounded-lg bg-red-50 px-3 py-2">
+                <p className="text-sm font-bold text-red-600">
+                  空室状況：満室
+                </p>
+                <p className="mt-0.5 text-xs leading-tight text-red-500">
+                  ※空き予定の確認やキャンセル待ちは可能です
+                </p>
+              </div>
+            )}
             <div className="mb-3 grid grid-cols-1 gap-1.5 text-sm text-slate-600 sm:grid-cols-3 sm:text-xs">
               <span className="flex items-center gap-1.5">
                 <svg className="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
