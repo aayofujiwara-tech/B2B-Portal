@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const SLOTS_FILE = path.join(process.cwd(), "data", "slots.json");
+// Vercel serverless: filesystem is read-only except /tmp.
+// - RUNTIME_FILE (/tmp/slots.json): writable, used for live updates.
+// - SEED_FILE (data/slots.json): read-only, used as initial default.
+const RUNTIME_FILE = path.join("/tmp", "slots.json");
+const SEED_FILE = path.join(process.cwd(), "data", "slots.json");
 
 interface SlotConfig {
   totalSlots: number;
@@ -15,16 +19,20 @@ interface SlotConfig {
 type SlotsData = Record<string, SlotConfig>;
 
 function readSlots(): SlotsData {
-  try {
-    const raw = fs.readFileSync(SLOTS_FILE, "utf-8");
-    return JSON.parse(raw);
-  } catch {
-    return {};
+  // Try runtime file first (written by admin), then fall back to seed
+  for (const filePath of [RUNTIME_FILE, SEED_FILE]) {
+    try {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      return JSON.parse(raw);
+    } catch {
+      // file not found or invalid — try next
+    }
   }
+  return {};
 }
 
 function writeSlots(data: SlotsData): void {
-  fs.writeFileSync(SLOTS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  fs.writeFileSync(RUNTIME_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
 // GET /api/slots — return all facility slot configs
