@@ -27,6 +27,100 @@ import { trackEvent } from "@/app/lib/analytics";
 
 const ADMIN_PASSWORD = "ikuta2024";
 
+// --- Session management (Cookie-based, equivalent to NextAuth maxAge/updateAge) ---
+const SESSION_COOKIE = "b2b_admin_session";
+const SESSION_MAX_AGE = 28800; // 8 hours in seconds
+const SESSION_UPDATE_AGE = 3600; // 1 hour in seconds
+const COOKIE_PATH = "/admin-aska-secure-gate-2026";
+
+function getSessionCookie(): { lastActivity: number } | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${SESSION_COOKIE}=([^;]*)`));
+  if (!match) return null;
+  try {
+    return JSON.parse(decodeURIComponent(match[1]));
+  } catch {
+    return null;
+  }
+}
+
+function setSessionCookie(lastActivity: number) {
+  const value = encodeURIComponent(JSON.stringify({ lastActivity }));
+  document.cookie = `${SESSION_COOKIE}=${value}; path=${COOKIE_PATH}; max-age=${SESSION_MAX_AGE}; SameSite=Strict`;
+}
+
+function clearSessionCookie() {
+  document.cookie = `${SESSION_COOKIE}=; path=${COOKIE_PATH}; max-age=0; SameSite=Strict`;
+}
+
+function isSessionValid(): boolean {
+  const session = getSessionCookie();
+  if (!session) return false;
+  const elapsed = (Date.now() - session.lastActivity) / 1000;
+  return elapsed < SESSION_MAX_AGE;
+}
+
+function refreshSessionIfNeeded(): boolean {
+  const session = getSessionCookie();
+  if (!session) return false;
+  const elapsed = (Date.now() - session.lastActivity) / 1000;
+  if (elapsed >= SESSION_MAX_AGE) return false;
+  if (elapsed >= SESSION_UPDATE_AGE) {
+    setSessionCookie(Date.now());
+  }
+  return true;
+}
+
+// --- Lockout management (Cookie-based brute-force protection) ---
+const LOCKOUT_COOKIE = "b2b_admin_lockout";
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+function getLockoutCookie(): { attempts: number; lockedUntil: number } | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${LOCKOUT_COOKIE}=([^;]*)`));
+  if (!match) return null;
+  try {
+    return JSON.parse(decodeURIComponent(match[1]));
+  } catch {
+    return null;
+  }
+}
+
+function setLockoutCookie(data: { attempts: number; lockedUntil: number }) {
+  const value = encodeURIComponent(JSON.stringify(data));
+  const maxAge = Math.ceil(LOCKOUT_DURATION_MS / 1000) + 60;
+  document.cookie = `${LOCKOUT_COOKIE}=${value}; path=${COOKIE_PATH}; max-age=${maxAge}; SameSite=Strict`;
+}
+
+function clearLockoutCookie() {
+  document.cookie = `${LOCKOUT_COOKIE}=; path=${COOKIE_PATH}; max-age=0; SameSite=Strict`;
+}
+
+function checkLockout(): { locked: boolean; remainingMinutes: number } {
+  const data = getLockoutCookie();
+  if (!data || data.attempts < MAX_ATTEMPTS) return { locked: false, remainingMinutes: 0 };
+  const remaining = data.lockedUntil - Date.now();
+  if (remaining <= 0) {
+    clearLockoutCookie();
+    return { locked: false, remainingMinutes: 0 };
+  }
+  return { locked: true, remainingMinutes: Math.ceil(remaining / 60000) };
+}
+
+function recordFailedAttempt(): { locked: boolean; remainingMinutes: number; attempts: number } {
+  const data = getLockoutCookie() || { attempts: 0, lockedUntil: 0 };
+  data.attempts += 1;
+  if (data.attempts >= MAX_ATTEMPTS) {
+    data.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+  }
+  setLockoutCookie(data);
+  if (data.attempts >= MAX_ATTEMPTS) {
+    return { locked: true, remainingMinutes: Math.ceil(LOCKOUT_DURATION_MS / 60000), attempts: data.attempts };
+  }
+  return { locked: false, remainingMinutes: 0, attempts: data.attempts };
+}
+
 function ConfirmModal({
   title,
   message,
@@ -80,17 +174,41 @@ const CLEANUP_PRESETS = [
 
 function AdminAuth({ onAuth }: { onAuth: () => void }) {
   const [pw, setPw] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
+  const [lockout, setLockout] = useState<{ locked: boolean; remainingMinutes: number }>({ locked: false, remainingMinutes: 0 });
+
+  // Check lockout on mount + periodic countdown
+  useEffect(() => {
+    setLockout(checkLockout());
+    const timer = setInterval(() => {
+      setLockout(checkLockout());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const lockState = checkLockout();
+    if (lockState.locked) {
+      setLockout(lockState);
+      return;
+    }
     if (pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem("b2b_admin_auth", "1");
+      clearLockoutCookie();
+      setSessionCookie(Date.now());
       onAuth();
     } else {
-      setError(true);
+      const result = recordFailedAttempt();
+      if (result.locked) {
+        setLockout({ locked: true, remainingMinutes: result.remainingMinutes });
+        setError("");
+      } else {
+        setError(`パスワードが正しくありません（${result.attempts}/${MAX_ATTEMPTS}回）`);
+      }
     }
   };
+
+  const isLocked = lockout.locked;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -98,20 +216,35 @@ function AdminAuth({ onAuth }: { onAuth: () => void }) {
       <main className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center justify-center px-4">
         <div className="w-full rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="mb-4 text-center text-lg font-bold text-slate-800">管理画面ログイン</h1>
-          <form onSubmit={handleSubmit}>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">パスワード</label>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => { setPw(e.target.value); setError(false); }}
-              className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              autoFocus
-            />
-            {error && <p className="mb-3 text-xs text-red-600">パスワードが正しくありません</p>}
-            <button type="submit" className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-dark">
-              ログイン
-            </button>
-          </form>
+
+          {isLocked ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+              <p className="mb-1 text-sm font-bold text-red-700">
+                ログインが一時的にロックされています
+              </p>
+              <p className="text-xs text-red-600">
+                パスワードの入力に{MAX_ATTEMPTS}回連続で失敗したため、約{lockout.remainingMinutes}分間ログインできません。
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                しばらくしてからもう一度お試しください。
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">パスワード</label>
+              <input
+                type="password"
+                value={pw}
+                onChange={(e) => { setPw(e.target.value); setError(""); }}
+                className="mb-3 w-full rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                autoFocus
+              />
+              {error && <p className="mb-3 text-xs text-red-600">{error}</p>}
+              <button type="submit" className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-dark">
+                ログイン
+              </button>
+            </form>
+          )}
         </div>
       </main>
       <Footer />
@@ -171,11 +304,25 @@ export default function AdminPage() {
     setNotifyEmails(getNotificationEmails());
   };
 
+  // Session check on mount
   useEffect(() => {
-    if (sessionStorage.getItem("b2b_admin_auth") === "1") {
+    if (isSessionValid()) {
+      refreshSessionIfNeeded();
       setAuthed(true);
     }
   }, []);
+
+  // Silent refresh: check session every 60s, refresh if active, expire if stale
+  useEffect(() => {
+    if (!authed) return;
+    const timer = setInterval(() => {
+      if (!refreshSessionIfNeeded()) {
+        clearSessionCookie();
+        setAuthed(false);
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [authed]);
 
   useEffect(() => {
     if (authed) loadData();
