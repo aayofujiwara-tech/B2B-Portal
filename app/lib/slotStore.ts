@@ -31,6 +31,9 @@ export interface AssessmentLog {
   result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
   triggerFlags?: string[];
+  agreed_terms?: boolean;
+  agreed_consent?: boolean;
+  agreed_at?: string;
   isHandled?: boolean;
   handledAt?: string;
 }

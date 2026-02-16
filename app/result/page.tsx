@@ -47,6 +47,9 @@ function ResultContent() {
   const mentalGrade = searchParams.get("mentalGrade") || "";
   const selfHarm = searchParams.get("selfHarm") === "1";
   const otherHarm = searchParams.get("otherHarm") === "1";
+  const agreedTerms = searchParams.get("agreed_terms") === "1";
+  const agreedConsent = searchParams.get("agreed_consent") === "1";
+  const agreedAt = searchParams.get("agreed_at") || "";
 
   useEffect(() => {
     if (!disease) return;
@@ -84,6 +87,9 @@ function ResultContent() {
       result: assessmentResult.status,
       reason: assessmentResult.reasons.join("; "),
       triggerFlags: assessmentResult.triggerFlags,
+      agreed_terms: agreedTerms,
+      agreed_consent: agreedConsent,
+      agreed_at: agreedAt || undefined,
     });
 
     // バックグラウンドでGASへ判定ログを即時送信（UXをブロックしない）
