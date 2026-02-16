@@ -19,12 +19,15 @@ const DISEASE_OPTIONS = [
   "呼吸器疾患",
   "がん（緩和ケア含む）",
   "神経難病（パーキンソン等）",
+  "精神疾患（統合失調症、うつ、双極性障害など）",
   "人工呼吸器",
   "透析",
   "その他",
 ];
 
-const ADL_OPTIONS = ["自立", "一部介助", "半介助", "全介助"];
+const MENTAL_GRADE_OPTIONS = ["1級", "2級", "3級"];
+
+const ADL_OPTIONS = ["自立", "見守り", "一部介助", "全介助"];
 const DEMENTIA_LEVEL_OPTIONS = [
   "軽度（見守り程度）",
   "中等度（日常的な支援が必要）",
@@ -86,8 +89,13 @@ const FACILITY_INFO: Record<string, {
 export default function TopPage() {
   const router = useRouter();
   const [disease, setDisease] = useState("");
+  const [diseaseOther, setDiseaseOther] = useState("");
   const [adl, setAdl] = useState("");
   const [dementiaLevel, setDementiaLevel] = useState("");
+  const [medicalDevice, setMedicalDevice] = useState(false);
+  const [mentalGrade, setMentalGrade] = useState("");
+  const [selfHarm, setSelfHarm] = useState(false);
+  const [otherHarm, setOtherHarm] = useState(false);
   const [gender, setGender] = useState("");
   const [budget, setBudget] = useState("");
   const [timing, setTiming] = useState("");
@@ -112,7 +120,8 @@ export default function TopPage() {
     }
   }, [facility]);
 
-  const isFormComplete = disease && adl && gender && budget && timing && facility;
+  const isDiseaseValid = disease && (disease !== "その他" || diseaseOther.trim());
+  const isFormComplete = isDiseaseValid && adl && gender && budget && timing && facility;
   const isFormValid = isFormComplete && agreedTerms && agreedConsent;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -130,7 +139,12 @@ export default function TopPage() {
       timing,
       facility,
       welfare: welfare ? "1" : "0",
+      medicalDevice: medicalDevice ? "1" : "0",
       ...(dementiaLevel ? { dementiaLevel } : {}),
+      ...(diseaseOther.trim() ? { diseaseOther: diseaseOther.trim() } : {}),
+      ...(mentalGrade ? { mentalGrade } : {}),
+      ...(selfHarm ? { selfHarm: "1" } : {}),
+      ...(otherHarm ? { otherHarm: "1" } : {}),
       agreed_terms: "1",
       agreed_consent: "1",
       agreed_at: new Date().toISOString(),
@@ -284,9 +298,16 @@ export default function TopPage() {
               <select
                 value={disease}
                 onChange={(e) => {
-                  setDisease(e.target.value);
-                  if (e.target.value !== "認知症") setDementiaLevel("");
-                  trackEvent("assessment_start", "select_disease", e.target.value);
+                  const v = e.target.value;
+                  setDisease(v);
+                  if (v !== "認知症") setDementiaLevel("");
+                  if (!v.includes("精神疾患")) {
+                    setMentalGrade("");
+                    setSelfHarm(false);
+                    setOtherHarm(false);
+                  }
+                  if (v !== "その他") setDiseaseOther("");
+                  trackEvent("assessment_start", "select_disease", v);
                 }}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-base text-slate-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
               >
@@ -327,6 +348,101 @@ export default function TopPage() {
               </div>
             )}
 
+            {/* Mental illness sub-items (conditional) */}
+            {disease.includes("精神疾患") && (
+              <div className="mb-5 space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    障害等級（精神障害者保健福祉手帳）
+                  </label>
+                  <div className="flex gap-2.5 sm:gap-2">
+                    {MENTAL_GRADE_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setMentalGrade(option);
+                          trackEvent("assessment_start", "select_mental_grade", option);
+                        }}
+                        className={`flex-1 rounded-lg border px-3 py-3 text-sm font-medium transition ${
+                          mentalGrade === option
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    自傷・他害の有無
+                  </label>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={selfHarm}
+                        onChange={(e) => setSelfHarm(e.target.checked)}
+                        className="h-5 w-5 rounded border-slate-300 text-primary accent-primary sm:h-4 sm:w-4"
+                      />
+                      <span className="text-sm font-medium text-slate-700">
+                        自傷あり
+                      </span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={otherHarm}
+                        onChange={(e) => setOtherHarm(e.target.checked)}
+                        className="h-5 w-5 rounded border-slate-300 text-primary accent-primary sm:h-4 sm:w-4"
+                      />
+                      <span className="text-sm font-medium text-slate-700">
+                        他害あり
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Other disease free text (conditional) */}
+            {disease === "その他" && (
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  疾患・状態の詳細 <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={diseaseOther}
+                  onChange={(e) => setDiseaseOther(e.target.value)}
+                  placeholder="具体的な疾患名や状態を入力してください"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
+                />
+                {disease === "その他" && !diseaseOther.trim() && (
+                  <p className="mt-1.5 text-xs text-danger">
+                    「その他」を選択した場合は詳細の入力が必要です
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Medical device checkbox */}
+            <div className="mb-5">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 transition hover:border-slate-300">
+                <input
+                  type="checkbox"
+                  checked={medicalDevice}
+                  onChange={(e) => setMedicalDevice(e.target.checked)}
+                  className="h-5 w-5 rounded border-slate-300 text-primary accent-primary sm:h-4 sm:w-4"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  医療機器・医療処置あり
+                </span>
+              </label>
+            </div>
+
             {/* ADL */}
             <div className="mb-5">
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -352,6 +468,17 @@ export default function TopPage() {
                 ))}
               </div>
             </div>
+
+            {/* Dementia safety warning */}
+            {disease === "認知症" &&
+              dementiaLevel?.includes("重度") &&
+              (adl === "自立" || adl === "見守り" || adl === "一部介助") && (
+              <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-sm font-medium leading-relaxed text-red-700">
+                  認知症重度で当該介助レベルの場合、外出時の交通事故等のリスクがあります。十分にご確認ください。
+                </p>
+              </div>
+            )}
 
             {/* Gender */}
             <div className="mb-5">

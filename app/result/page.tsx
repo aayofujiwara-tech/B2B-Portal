@@ -36,6 +36,7 @@ function ResultContent() {
   const processedRef = useRef(false);
 
   const disease = searchParams.get("disease") || "";
+  const diseaseOther = searchParams.get("diseaseOther") || "";
   const adl = searchParams.get("adl") || "";
   const dementiaLevel = searchParams.get("dementiaLevel") || "";
   const gender = searchParams.get("gender") || "";
@@ -43,6 +44,10 @@ function ResultContent() {
   const timing = searchParams.get("timing") || "";
   const facility = searchParams.get("facility") || "any";
   const welfare = searchParams.get("welfare") === "1";
+  const medicalDevice = searchParams.get("medicalDevice") === "1";
+  const mentalGrade = searchParams.get("mentalGrade") || "";
+  const selfHarm = searchParams.get("selfHarm") === "1";
+  const otherHarm = searchParams.get("otherHarm") === "1";
 
   useEffect(() => {
     if (!disease) return;
@@ -51,6 +56,7 @@ function ResultContent() {
 
     const assessmentResult = runAssessment({
       disease,
+      diseaseOther: diseaseOther || undefined,
       adl,
       dementiaLevel: dementiaLevel || undefined,
       gender,
@@ -58,15 +64,24 @@ function ResultContent() {
       timing,
       facility,
       welfare,
+      medicalDevice,
+      mentalGrade: mentalGrade || undefined,
+      selfHarm,
+      otherHarm,
     });
 
     addAssessmentLog({
       disease,
+      diseaseOther: diseaseOther || undefined,
       adl,
       dementiaLevel: dementiaLevel || undefined,
       gender,
       budget,
       timing,
+      medicalDevice,
+      mentalGrade: mentalGrade || undefined,
+      selfHarm,
+      otherHarm,
       result: assessmentResult.status,
       reason: assessmentResult.reasons.join("; "),
       triggerFlags: assessmentResult.triggerFlags,
@@ -340,13 +355,38 @@ function ResultContent() {
         <h3 className="mb-3 text-sm font-bold text-slate-800">入力内容</h3>
         <dl className="grid grid-cols-1 gap-y-2 text-sm sm:grid-cols-2 sm:gap-x-4">
           <dt className="text-muted">疾患</dt>
-          <dd className="text-slate-700">{disease}</dd>
+          <dd className="text-slate-700">
+            {disease}
+            {diseaseOther && `（${diseaseOther}）`}
+          </dd>
+          {medicalDevice && (
+            <>
+              <dt className="text-muted">医療機器</dt>
+              <dd className="text-slate-700">あり</dd>
+            </>
+          )}
           <dt className="text-muted">ADL</dt>
           <dd className="text-slate-700">{adl}</dd>
           {dementiaLevel && (
             <>
               <dt className="text-muted">認知症の程度</dt>
               <dd className="text-slate-700">{dementiaLevel}</dd>
+            </>
+          )}
+          {mentalGrade && (
+            <>
+              <dt className="text-muted">障害等級</dt>
+              <dd className="text-slate-700">{mentalGrade}</dd>
+            </>
+          )}
+          {(selfHarm || otherHarm) && (
+            <>
+              <dt className="text-muted">自傷・他害</dt>
+              <dd className="text-slate-700">
+                {[selfHarm && "自傷あり", otherHarm && "他害あり"]
+                  .filter(Boolean)
+                  .join("・")}
+              </dd>
             </>
           )}
           <dt className="text-muted">性別</dt>

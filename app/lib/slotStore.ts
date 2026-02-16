@@ -18,11 +18,16 @@ export interface AssessmentLog {
   id: string;
   timestamp: string;
   disease: string;
+  diseaseOther?: string;
   adl: string;
   dementiaLevel?: string;
   gender: string;
   budget: string;
   timing: string;
+  medicalDevice?: boolean;
+  mentalGrade?: string;
+  selfHarm?: boolean;
+  otherHarm?: boolean;
   result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
   triggerFlags?: string[];
@@ -487,6 +492,7 @@ export async function sendBookingNotification(
 
 export interface AssessmentInput {
   disease: string;
+  diseaseOther?: string;
   adl: string;
   dementiaLevel?: string;
   gender: string;
@@ -494,6 +500,10 @@ export interface AssessmentInput {
   timing: string;
   facility?: string;
   welfare?: boolean;
+  medicalDevice?: boolean;
+  mentalGrade?: string;
+  selfHarm?: boolean;
+  otherHarm?: boolean;
 }
 
 export interface AssessmentResult {
@@ -508,8 +518,9 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   const triggerFlags: string[] = [];
   let needsConsultation = false;
 
-  // Safety risk check — ADL高（自立/一部介助）+ 認知症重度 → 徘徊リスク
-  const isHighAdl = input.adl === "自立" || input.adl === "一部介助";
+  // Safety risk check — ADL高（自立/見守り/一部介助）+ 認知症重度 → 徘徊リスク
+  const isHighAdl =
+    input.adl === "自立" || input.adl === "見守り" || input.adl === "一部介助";
   const isSevereDementia =
     input.disease.includes("認知症") &&
     input.dementiaLevel?.includes("重度");
@@ -529,6 +540,28 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
     };
   }
 
+  // Medical device check → 要相談
+  if (input.medicalDevice) {
+    needsConsultation = true;
+    triggerFlags.push("medical_device");
+    reasons.push(
+      "医療機器・医療処置ありのため、受入体制の事前確認が必要です"
+    );
+  }
+
+  // Self-harm / other-harm check → 要相談
+  if (input.selfHarm || input.otherHarm) {
+    needsConsultation = true;
+    if (input.selfHarm) {
+      triggerFlags.push("self_harm");
+      reasons.push("自傷リスクがあるため、ケア体制の事前協議が必要です");
+    }
+    if (input.otherHarm) {
+      triggerFlags.push("other_harm");
+      reasons.push("他害リスクがあるため、安全管理体制の事前協議が必要です");
+    }
+  }
+
   // Toyoshin + welfare check
   if (input.facility === "toyoshin" && input.welfare) {
     needsConsultation = true;
@@ -546,6 +579,16 @@ export function runAssessment(input: AssessmentInput): AssessmentResult {
   } else if (input.disease.includes("透析")) {
     triggerFlags.push("dialysis");
     reasons.push("透析スケジュールに合わせた送迎プランをご提案します");
+  }
+
+  // Mental illness notes
+  if (input.disease.includes("精神疾患")) {
+    triggerFlags.push("mental_illness");
+    if (input.mentalGrade) {
+      reasons.push(
+        `精神障害者保健福祉手帳${input.mentalGrade}をお持ちとのこと、面談にて詳細をお伺いします`
+      );
+    }
   }
 
   // ADL check — positive framing, no longer a blocker

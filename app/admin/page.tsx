@@ -248,8 +248,9 @@ export default function AdminPage() {
     const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 
     const assessmentHeader = [
-      "種別", "ID", "タイムスタンプ", "判定結果", "疾患", "ADL",
-      "認知症レベル", "性別", "予算", "時期", "理由",
+      "種別", "ID", "タイムスタンプ", "判定結果", "疾患", "疾患詳細", "ADL",
+      "認知症レベル", "医療機器", "障害等級", "自傷", "他害",
+      "性別", "予算", "時期", "理由",
       "トリガーフラグ", "対応済", "対応日時",
     ];
     const bookingHeader = [
@@ -285,7 +286,10 @@ export default function AdminPage() {
       rows.push(pad([
         "判定", l.id, l.timestamp,
         l.result === "acceptable" ? "受入可能" : l.result === "safety_risk" ? "要慎重検討" : "要相談",
-        l.disease, l.adl, l.dementiaLevel || "", l.gender, l.budget, l.timing,
+        l.disease, l.diseaseOther || "", l.adl, l.dementiaLevel || "",
+        l.medicalDevice ? "あり" : "", l.mentalGrade || "",
+        l.selfHarm ? "あり" : "", l.otherHarm ? "あり" : "",
+        l.gender, l.budget, l.timing,
         l.reason || "", (l.triggerFlags || []).join(";"),
         l.isHandled ? "済" : "未", l.handledAt || "",
       ].map(esc)).join(","));
@@ -628,7 +632,10 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-5 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
                         <span className="text-muted">疾患:</span>{" "}
-                        <span className="font-medium">{log.disease}</span>
+                        <span className="font-medium">
+                          {log.disease}
+                          {log.diseaseOther && `（${log.diseaseOther}）`}
+                        </span>
                       </div>
                       <div>
                         <span className="text-muted">ADL:</span>{" "}
@@ -647,6 +654,22 @@ export default function AdminPage() {
                         <span className="font-medium">{log.timing}</span>
                       </div>
                     </div>
+                    {(log.medicalDevice || log.selfHarm || log.otherHarm || log.mentalGrade) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {log.medicalDevice && (
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">医療機器あり</span>
+                        )}
+                        {log.mentalGrade && (
+                          <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">障害等級: {log.mentalGrade}</span>
+                        )}
+                        {log.selfHarm && (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">自傷あり</span>
+                        )}
+                        {log.otherHarm && (
+                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">他害あり</span>
+                        )}
+                      </div>
+                    )}
                     {log.reason && (
                       <p className="mt-2 text-sm text-muted sm:text-xs">{log.reason}</p>
                     )}
