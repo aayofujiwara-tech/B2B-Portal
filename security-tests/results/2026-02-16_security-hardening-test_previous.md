@@ -2,7 +2,7 @@
 
 | Item | Value |
 |---|---|
-| Test date | 2026-02-16 12:09 |
+| Test date | 2026-02-16 07:18 |
 | Target | Vercel production: https://b2-b-portal-roan.vercel.app |
 | Admin URL | https://b2-b-portal-roan.vercel.app/admin-aska-secure-gate-2026 |
 | Total | PASS: 10 / FAIL: 0 / WARN: 5 |
@@ -227,25 +227,4 @@ All consistency checks passed.
 
 ## Previous Test Comparison
 
-| Test ID | Previous | Current | Change |
-|---|---|---|---|
-| A-1 | PASS | PASS | — |
-| A-2 | PASS | PASS | — |
-| A-3 | WARN | WARN | — |
-| B-1 | PASS | PASS | — |
-| B-2 | PASS | PASS | — |
-| B-3 | WARN | WARN | — |
-| B-4 | WARN | WARN | — |
-| B-5 | PASS | PASS | — |
-| C-1 | PASS | PASS | — |
-| C-2 | WARN | WARN | — |
-| C-3 | PASS | PASS | — |
-| C-4 | PASS | PASS | — |
-| C-5 | PASS | PASS | — |
-| D-1 | WARN | WARN | — |
-| D-2 | PASS | PASS | — |
-
-**Previous total:** PASS: 10 / FAIL: 0 / WARN: 5
-**Current total:** PASS: 10 / FAIL: 0 / WARN: 5
-**Changes:** 0 test(s) changed status
-**Previous result file:** 2026-02-16_security-hardening-test_previous.md
+No previous test results found. This is the initial baseline.

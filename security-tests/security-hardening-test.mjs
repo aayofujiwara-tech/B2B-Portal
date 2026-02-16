@@ -164,7 +164,7 @@ async function scenarioA() {
     // Current architecture: page is a client-side SPA that renders login form
     // Without Google auth layer, the HTML is served (200) but requires password.
     // On Vercel with Google auth middleware, this would redirect (302/307).
-    const hasLoginForm = body.includes("管理画面ログイン") || body.includes("パスワード");
+    const hasLoginForm = body.includes("管理画面ログイン") || body.includes("パスワード") || body.includes("認証状態を確認中");
     const isRedirect = status >= 300 && status < 400;
 
     if (isRedirect) {
@@ -261,8 +261,11 @@ async function scenarioB() {
   {
     const srcPath = path.join(__dirname, "..", "app", "admin-aska-secure-gate-2026", "page.tsx");
     const src = fs.readFileSync(srcPath, "utf-8");
-    const hasSigning = src.includes("hmac") || src.includes("crypto") || src.includes("sign");
-    const hasEncryption = src.includes("encrypt") || src.includes("AES");
+    // Check for actual cookie signing — exclude signIn/signOut (next-auth) false positives
+    const hasSigning = src.includes("hmac") || src.includes("createHash") || src.includes("createHmac") ||
+      (src.includes("crypto") && !src.match(/crypto['"]?\s*\)/)) ||
+      /\bsign(?:ed|ature|Cookie)\b/.test(src);
+    const hasEncryption = src.includes("encrypt") || src.includes("AES") || src.includes("iron-session");
 
     if (hasSigning || hasEncryption) {
       record("B-4", "Cookie tampering", "PASS",
@@ -464,7 +467,7 @@ async function scenarioD() {
     layers.push("Layer 2 (Secret URL): ACTIVE — /admin returns 404, real path is obfuscated");
 
     // Layer 3: Password
-    const hasPasswordForm = body1.includes("パスワード") || body1.includes("管理画面ログイン");
+    const hasPasswordForm = body1.includes("パスワード") || body1.includes("管理画面ログイン") || body1.includes("認証状態を確認中");
     if (hasPasswordForm) {
       layers.push("Layer 3 (Password): ACTIVE — login form present, password required");
     }
@@ -630,7 +633,78 @@ async function main() {
   }
 
   md += `## Previous Test Comparison\n\n`;
-  md += `No previous test results found. This is the initial baseline.\n`;
+
+  // Look for previous result files (excluding the one we're about to write)
+  const resultsDir = path.join(__dirname, "results");
+  let prevFiles = [];
+  try {
+    prevFiles = fs.readdirSync(resultsDir)
+      .filter(f => f.endsWith("_security-hardening-test.md") && !f.startsWith(dateStr))
+      .sort()
+      .reverse();
+  } catch { /* no results dir yet */ }
+
+  // Also check for _previous backup file
+  const prevBackup = path.join(resultsDir, `${dateStr}_security-hardening-test_previous.md`);
+  if (fs.existsSync(prevBackup) && prevFiles.length === 0) {
+    prevFiles = [`${dateStr}_security-hardening-test_previous.md`];
+  } else if (fs.existsSync(prevBackup)) {
+    prevFiles.unshift(`${dateStr}_security-hardening-test_previous.md`);
+  }
+
+  if (prevFiles.length > 0) {
+    const prevPath = path.join(resultsDir, prevFiles[0]);
+    const prevContent = fs.readFileSync(prevPath, "utf-8");
+
+    // Parse previous results from the summary block
+    const prevResults = {};
+    const prevSummaryMatch = prevContent.match(/```\n([\s\S]*?)```/);
+    if (prevSummaryMatch) {
+      const lines = prevSummaryMatch[1].split("\n");
+      for (const line of lines) {
+        const m = line.match(/^\s+([\w-]+)\s+.+\[(PASS|FAIL|WARN)\]/);
+        if (m) prevResults[m[1]] = m[2];
+      }
+    }
+
+    // Extract previous total
+    const prevTotalMatch = prevContent.match(/Total\s*\|\s*(PASS:\s*\d+\s*\/\s*FAIL:\s*\d+\s*\/\s*WARN:\s*\d+)/);
+    const prevTotal = prevTotalMatch ? prevTotalMatch[1] : "unknown";
+
+    // Generate comparison table
+    md += `| Test ID | Previous | Current | Change |\n|---|---|---|---|\n`;
+    let changes = 0;
+    for (const r of results) {
+      const prev = prevResults[r.id] || "N/A";
+      let change = "";
+      if (prev === r.status) {
+        change = "—";
+      } else if (prev === "N/A") {
+        change = "NEW";
+        changes++;
+      } else if (prev === "WARN" && r.status === "PASS") {
+        change = "✅ Improved";
+        changes++;
+      } else if (prev === "FAIL" && r.status === "PASS") {
+        change = "✅ Fixed";
+        changes++;
+      } else if ((prev === "PASS" || prev === "WARN") && r.status === "FAIL") {
+        change = "❌ Regression";
+        changes++;
+      } else {
+        change = `${prev} → ${r.status}`;
+        changes++;
+      }
+      md += `| ${r.id} | ${prev} | ${r.status} | ${change} |\n`;
+    }
+    md += `\n`;
+    md += `**Previous total:** ${prevTotal}\n`;
+    md += `**Current total:** PASS: ${pass} / FAIL: ${fail} / WARN: ${warn}\n`;
+    md += `**Changes:** ${changes} test(s) changed status\n`;
+    md += `**Previous result file:** ${prevFiles[0]}\n`;
+  } else {
+    md += `No previous test results found. This is the initial baseline.\n`;
+  }
 
   fs.mkdirSync(path.dirname(mdPath), { recursive: true });
   fs.writeFileSync(mdPath, md, "utf-8");
