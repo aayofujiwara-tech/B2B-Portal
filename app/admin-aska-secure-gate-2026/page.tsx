@@ -5,17 +5,8 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import {
   getSlotConfig,
-  reloadSlots,
-  getAssessmentLogs,
-  getBookingLogs,
   getNotificationEmails,
   saveNotificationEmails,
-  toggleAssessmentHandled,
-  toggleBookingHandled,
-  deleteAssessmentLogs,
-  deleteBookingLogs,
-  deleteAssessmentLogsBefore,
-  deleteBookingLogsBefore,
   FACILITY_IDS,
   FACILITY_LABELS,
   type SlotConfig,
@@ -23,6 +14,67 @@ import {
   type BookingLog,
   type FacilityId,
 } from "@/app/lib/slotStore";
+
+// ---------------------------------------------------------------------------
+// localStorage オーバーレイ（対応済み状態・非表示ログ）
+// スプレッドシートには isHandled/handledAt 列がないため、ローカルで管理する
+// ---------------------------------------------------------------------------
+const HANDLED_ASSESSMENTS_KEY = "b2b_handled_assessments";
+const HANDLED_BOOKINGS_KEY = "b2b_handled_bookings";
+const HIDDEN_ASSESSMENT_IDS_KEY = "b2b_hidden_assessment_ids";
+const HIDDEN_BOOKING_IDS_KEY = "b2b_hidden_booking_ids";
+
+type HandledOverlay = Record<string, { isHandled: boolean; handledAt?: string }>;
+
+function getHandledOverlay(key: string): HandledOverlay {
+  if (typeof window === "undefined") return {};
+  const stored = localStorage.getItem(key);
+  return stored ? JSON.parse(stored) : {};
+}
+
+function saveHandledOverlay(key: string, overlay: HandledOverlay) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify(overlay));
+  }
+}
+
+function getHiddenIds(key: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  const stored = localStorage.getItem(key);
+  return stored ? new Set(JSON.parse(stored)) : new Set();
+}
+
+function addHiddenIds(key: string, ids: string[]) {
+  const hidden = getHiddenIds(key);
+  ids.forEach((id) => hidden.add(id));
+  if (typeof window !== "undefined") {
+    localStorage.setItem(key, JSON.stringify([...hidden]));
+  }
+}
+
+function mergeAssessmentOverlay(apiLogs: AssessmentLog[]): AssessmentLog[] {
+  const hidden = getHiddenIds(HIDDEN_ASSESSMENT_IDS_KEY);
+  const handled = getHandledOverlay(HANDLED_ASSESSMENTS_KEY);
+  return apiLogs
+    .filter((log) => !hidden.has(log.id))
+    .map((log) => ({
+      ...log,
+      isHandled: handled[log.id]?.isHandled ?? false,
+      handledAt: handled[log.id]?.handledAt,
+    }));
+}
+
+function mergeBookingOverlay(apiLogs: BookingLog[]): BookingLog[] {
+  const hidden = getHiddenIds(HIDDEN_BOOKING_IDS_KEY);
+  const handled = getHandledOverlay(HANDLED_BOOKINGS_KEY);
+  return apiLogs
+    .filter((log) => !hidden.has(log.id))
+    .map((log) => ({
+      ...log,
+      isHandled: handled[log.id]?.isHandled ?? false,
+      handledAt: handled[log.id]?.handledAt,
+    }));
+}
 import { trackEvent } from "@/app/lib/analytics";
 
 const ADMIN_PASSWORD = "ikuta2024";
@@ -299,8 +351,24 @@ export default function AdminPage() {
       }
       setFacilitySlots(slots);
     }
-    setAssessmentLogs(getAssessmentLogs());
-    setBookingLogs(getBookingLogs());
+    // 判定ログ: API（スプレッドシート）→ localStorage オーバーレイとマージ
+    try {
+      const aRes = await fetch("/api/assessment-logs");
+      const apiAssessments = await aRes.json();
+      setAssessmentLogs(mergeAssessmentOverlay(apiAssessments));
+    } catch {
+      setAssessmentLogs([]);
+    }
+
+    // 受付ログ: API（スプレッドシート）→ localStorage オーバーレイとマージ
+    try {
+      const bRes = await fetch("/api/booking-logs");
+      const apiBookings = await bRes.json();
+      setBookingLogs(mergeBookingOverlay(apiBookings));
+    } catch {
+      setBookingLogs([]);
+    }
+
     setNotifyEmails(getNotificationEmails());
   };
 
@@ -363,7 +431,8 @@ export default function AdminPage() {
       title: "ログの削除",
       message: "このログを削除してもよろしいですか？",
       onConfirm: () => {
-        setAssessmentLogs(deleteAssessmentLogs([id]));
+        addHiddenIds(HIDDEN_ASSESSMENT_IDS_KEY, [id]);
+        setAssessmentLogs((prev) => prev.filter((l) => l.id !== id));
         setSelectedAssessments((prev) => { const next = new Set(prev); next.delete(id); return next; });
         setConfirmAction(null);
         showToast("ログを1件削除しました");
@@ -376,7 +445,8 @@ export default function AdminPage() {
       title: "ログの削除",
       message: "このログを削除してもよろしいですか？",
       onConfirm: () => {
-        setBookingLogs(deleteBookingLogs([id]));
+        addHiddenIds(HIDDEN_BOOKING_IDS_KEY, [id]);
+        setBookingLogs((prev) => prev.filter((l) => l.id !== id));
         setSelectedBookings((prev) => { const next = new Set(prev); next.delete(id); return next; });
         setConfirmAction(null);
         showToast("ログを1件削除しました");
@@ -391,7 +461,8 @@ export default function AdminPage() {
       message: `選択した${selectedAssessments.size}件のログを削除します。よろしいですか？`,
       warning: true,
       onConfirm: () => {
-        setAssessmentLogs(deleteAssessmentLogs([...selectedAssessments]));
+        addHiddenIds(HIDDEN_ASSESSMENT_IDS_KEY, [...selectedAssessments]);
+        setAssessmentLogs((prev) => prev.filter((l) => !selectedAssessments.has(l.id)));
         setSelectedAssessments(new Set());
         setConfirmAction(null);
         showToast(`${selectedAssessments.size}件のログを削除しました`);
@@ -406,7 +477,8 @@ export default function AdminPage() {
       message: `選択した${selectedBookings.size}件のログを削除します。よろしいですか？`,
       warning: true,
       onConfirm: () => {
-        setBookingLogs(deleteBookingLogs([...selectedBookings]));
+        addHiddenIds(HIDDEN_BOOKING_IDS_KEY, [...selectedBookings]);
+        setBookingLogs((prev) => prev.filter((l) => !selectedBookings.has(l.id)));
         setSelectedBookings(new Set());
         setConfirmAction(null);
         showToast(`${selectedBookings.size}件のログを削除しました`);
@@ -502,8 +574,12 @@ export default function AdminPage() {
       message: `${label}の全てのデータ（判定${aCount}件・受付${bCount}件、計${total}件）が消去されます。\nこの操作は取り消せません。本当によろしいですか？`,
       warning: true,
       onConfirm: () => {
-        setAssessmentLogs(deleteAssessmentLogsBefore(cutoffISO));
-        setBookingLogs(deleteBookingLogsBefore(cutoffISO));
+        const aToHide = assessmentLogs.filter((l) => l.timestamp < cutoffISO).map((l) => l.id);
+        const bToHide = bookingLogs.filter((l) => l.timestamp < cutoffISO).map((l) => l.id);
+        addHiddenIds(HIDDEN_ASSESSMENT_IDS_KEY, aToHide);
+        addHiddenIds(HIDDEN_BOOKING_IDS_KEY, bToHide);
+        setAssessmentLogs((prev) => prev.filter((l) => l.timestamp >= cutoffISO));
+        setBookingLogs((prev) => prev.filter((l) => l.timestamp >= cutoffISO));
         setSelectedAssessments(new Set());
         setSelectedBookings(new Set());
         setConfirmAction(null);
@@ -849,8 +925,20 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const updated = toggleAssessmentHandled(log.id);
-                          setAssessmentLogs(updated);
+                          const overlay = getHandledOverlay(HANDLED_ASSESSMENTS_KEY);
+                          const current = overlay[log.id]?.isHandled ?? false;
+                          overlay[log.id] = {
+                            isHandled: !current,
+                            handledAt: !current ? new Date().toISOString() : undefined,
+                          };
+                          saveHandledOverlay(HANDLED_ASSESSMENTS_KEY, overlay);
+                          setAssessmentLogs((prev) =>
+                            prev.map((l) =>
+                              l.id === log.id
+                                ? { ...l, isHandled: !current, handledAt: !current ? new Date().toISOString() : undefined }
+                                : l
+                            )
+                          );
                         }}
                         className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
                           log.isHandled
@@ -1014,8 +1102,20 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const updated = toggleBookingHandled(log.id);
-                          setBookingLogs(updated);
+                          const overlay = getHandledOverlay(HANDLED_BOOKINGS_KEY);
+                          const current = overlay[log.id]?.isHandled ?? false;
+                          overlay[log.id] = {
+                            isHandled: !current,
+                            handledAt: !current ? new Date().toISOString() : undefined,
+                          };
+                          saveHandledOverlay(HANDLED_BOOKINGS_KEY, overlay);
+                          setBookingLogs((prev) =>
+                            prev.map((l) =>
+                              l.id === log.id
+                                ? { ...l, isHandled: !current, handledAt: !current ? new Date().toISOString() : undefined }
+                                : l
+                            )
+                          );
                         }}
                         className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
                           log.isHandled

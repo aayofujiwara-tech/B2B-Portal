@@ -24,6 +24,14 @@ function doGet(e) {
       return readSlotsFromSheet();
     }
 
+    if (action === "readAssessmentLogs") {
+      return readAssessmentLogsFromSheet();
+    }
+
+    if (action === "readReceptionLogs") {
+      return readReceptionLogsFromSheet();
+    }
+
     return ContentService.createTextOutput(
       JSON.stringify({ error: "unknown action" })
     ).setMimeType(ContentService.MimeType.JSON);
@@ -253,6 +261,121 @@ function initSlotsSheet(ss, seedData) {
       sheet.getRange(2, 1, rows.length, HEADERS.length).setValues(rows);
     }
   }
+}
+
+// =========================================================================
+// 判定ログシート — 読み込み
+// =========================================================================
+function readAssessmentLogsFromSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("判定ログ");
+
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return ContentService.createTextOutput(
+      JSON.stringify([])
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var logs = [];
+  // 1行目はヘッダー → 2行目以降がデータ
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var rawTimestamp = row[0];
+    var isoTimestamp = rawTimestamp instanceof Date
+      ? rawTimestamp.toISOString()
+      : String(rawTimestamp || "");
+
+    var rawResult = String(row[2] || "");
+    var result = mapAssessmentResultToEnum(rawResult);
+
+    logs.push({
+      id: "a-" + i,
+      timestamp: isoTimestamp,
+      disease: String(row[3] || ""),
+      adl: String(row[4] || ""),
+      dementiaLevel: String(row[5] || ""),
+      budget: String(row[7] || ""),
+      result: result,
+      reason: String(row[8] || ""),
+      gender: "",
+      timing: "",
+    });
+  }
+
+  // 新しい順（降順）にソート
+  logs.sort(function (a, b) {
+    return a.timestamp > b.timestamp ? -1 : a.timestamp < b.timestamp ? 1 : 0;
+  });
+
+  return ContentService.createTextOutput(
+    JSON.stringify(logs)
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 判定結果文字列を enum 値にマッピング
+ * GAS書き込み時に "acceptable"/"consultation"/"safety_risk" または
+ * 日本語("受入可能"/"要相談"/"要慎重検討")で記録されるため両方に対応
+ */
+function mapAssessmentResultToEnum(rawResult) {
+  var val = String(rawResult || "");
+  if (val === "acceptable" || val === "受入可能") return "acceptable";
+  if (val === "safety_risk" || val.indexOf("慎重検討") >= 0 || val.indexOf("安全リスク") >= 0) return "safety_risk";
+  if (val === "consultation" || val === "要相談") return "consultation";
+  return "consultation";
+}
+
+// =========================================================================
+// 受付ログシート — 読み込み
+// =========================================================================
+function readReceptionLogsFromSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("受付ログ");
+
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return ContentService.createTextOutput(
+      JSON.stringify([])
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var logs = [];
+  // 1行目はヘッダー → 2行目以降がデータ
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var rawTimestamp = row[0];
+    var isoTimestamp = rawTimestamp instanceof Date
+      ? rawTimestamp.toISOString()
+      : String(rawTimestamp || "");
+
+    // 第1希望から日付と時間を分離（例: "2026-02-20 午前" → date="2026-02-20", time="午前"）
+    var pref1 = String(row[5] || "");
+    var prefParts = pref1.split(" ");
+    var preferredDate = prefParts[0] || "";
+    var preferredTime = prefParts.slice(1).join(" ") || "";
+
+    logs.push({
+      id: "b-" + i,
+      timestamp: isoTimestamp,
+      facilityName: String(row[1] || ""),
+      contactName: String(row[2] || ""),
+      phone: String(row[3] || ""),
+      email: String(row[4] || ""),
+      preferredDate: preferredDate,
+      preferredTime: preferredTime,
+      notes: String(row[12] || ""),
+    });
+  }
+
+  // 新しい順（降順）にソート
+  logs.sort(function (a, b) {
+    return a.timestamp > b.timestamp ? -1 : a.timestamp < b.timestamp ? 1 : 0;
+  });
+
+  return ContentService.createTextOutput(
+    JSON.stringify(logs)
+  ).setMimeType(ContentService.MimeType.JSON);
 }
 
 // =========================================================================
