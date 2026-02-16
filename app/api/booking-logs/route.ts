@@ -17,7 +17,7 @@ interface BookingLogEntry {
 // ---------------------------------------------------------------------------
 // メモリキャッシュ（サーバーレス関数のライフタイム中は保持される）
 // ---------------------------------------------------------------------------
-const CACHE_TTL_MS = 60 * 1000; // 60秒
+const CACHE_TTL_MS = 300 * 1000; // 300秒（ポーリング間隔と同期）
 let cache: { data: BookingLogEntry[]; timestamp: number } | null = null;
 
 /** キャッシュを無効化する（書き込み後に呼び出す） */
@@ -42,7 +42,7 @@ async function readBookingLogsFromGAS(): Promise<BookingLogEntry[]> {
 // ---------------------------------------------------------------------------
 export async function GET() {
   const cacheHeaders = {
-    "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+    "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
   };
 
   if (!GAS_WEBHOOK_URL) {

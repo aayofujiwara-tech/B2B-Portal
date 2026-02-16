@@ -20,7 +20,7 @@ type SlotsData = Record<string, SlotConfig>;
 // ---------------------------------------------------------------------------
 // メモリキャッシュ（サーバーレス関数のライフタイム中は保持される）
 // ---------------------------------------------------------------------------
-const CACHE_TTL_MS = 60 * 1000; // 60秒
+const CACHE_TTL_MS = 300 * 1000; // 300秒（ポーリング間隔と同期）
 let cache: { data: SlotsData; timestamp: number } | null = null;
 
 function readSeedSlots(): SlotsData {
@@ -75,7 +75,7 @@ export async function GET() {
   }
 
   const cacheHeaders = {
-    "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+    "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=60",
   };
 
   // キャッシュが有効期限内ならキャッシュから即返す

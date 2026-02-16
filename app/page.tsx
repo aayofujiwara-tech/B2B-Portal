@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
 
 const ConsentCheckbox = dynamic(
@@ -17,15 +18,7 @@ const ConsentCheckbox = dynamic(
   },
 );
 
-const SlotProgressBar = dynamic(
-  () => import("@/app/components/SlotProgressBar"),
-  {
-    loading: () => (
-      <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
-    ),
-  },
-);
-import { FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
+import { FACILITY_IDS, type FacilityId, type SlotConfig } from "@/app/lib/slotStore";
 import { type SavedContact, getSavedContact } from "@/app/booking/page";
 
 const DISEASE_OPTIONS = [
@@ -123,24 +116,36 @@ export default function TopPage() {
   const [agreedConsent, setAgreedConsent] = useState(false);
   const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
   const [facilityRemaining, setFacilityRemaining] = useState<number | null>(null);
+  const slotsDataRef = useRef<Record<string, SlotConfig> | null>(null);
 
   useEffect(() => {
     setSavedContact(getSavedContact());
   }, []);
 
+  const handleSlotsLoaded = useCallback((data: Record<string, SlotConfig>) => {
+    slotsDataRef.current = data;
+    if (facility && facility !== "any" && FACILITY_IDS.includes(facility as FacilityId)) {
+      const sc = data[facility];
+      if (sc) {
+        setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
+      } else {
+        setFacilityRemaining(null);
+      }
+    }
+  }, [facility]);
+
+  // 施設選択変更時に、既にロード済みのスロットデータから残数を再計算
   useEffect(() => {
     if (facility && facility !== "any" && FACILITY_IDS.includes(facility as FacilityId)) {
-      fetch("/api/slots")
-        .then((res) => res.json())
-        .then((data) => {
-          const sc = data[facility];
-          if (sc) {
-            setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
-          } else {
-            setFacilityRemaining(null);
-          }
-        })
-        .catch(() => setFacilityRemaining(null));
+      const data = slotsDataRef.current;
+      if (data) {
+        const sc = data[facility];
+        if (sc) {
+          setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
+        } else {
+          setFacilityRemaining(null);
+        }
+      }
     } else {
       setFacilityRemaining(null);
     }
@@ -201,7 +206,7 @@ export default function TopPage() {
 
         {/* Slot Progress */}
         <div className="mb-8">
-          <SlotProgressBar facilityId={facility || undefined} />
+          <SlotProgressBar facilityId={facility || undefined} onSlotsLoaded={handleSlotsLoaded} />
         </div>
 
         {/* Repeater Shortcut */}

@@ -27,6 +27,7 @@ function getElapsedLabel(isoTimestamp: string): string {
 
 interface SlotProgressBarProps {
   facilityId?: string;
+  onSlotsLoaded?: (data: Record<string, SlotConfig>) => void;
 }
 
 function readCache(): Record<string, SlotConfig> | null {
@@ -83,13 +84,15 @@ function extractSlotInfo(
   return { total: t, used: u, ts, label: "全拠点合計" };
 }
 
-export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
+export default function SlotProgressBar({ facilityId, onSlotsLoaded }: SlotProgressBarProps) {
   const [total, setTotal] = useState(0);
   const [used, setUsed] = useState(0);
   const [elapsed, setElapsed] = useState("");
   const [statusLabel, setStatusLabel] = useState("");
   const [ready, setReady] = useState(false);
   const trackedRef = useRef(false);
+  const onSlotsLoadedRef = useRef(onSlotsLoaded);
+  onSlotsLoadedRef.current = onSlotsLoaded;
 
   const applyData = useCallback(
     (data: Record<string, SlotConfig>) => {
@@ -99,6 +102,8 @@ export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
       setElapsed(getElapsedLabel(info.ts));
       setStatusLabel(info.label);
       setReady(true);
+
+      onSlotsLoadedRef.current?.(data);
 
       if (!trackedRef.current) {
         trackedRef.current = true;
