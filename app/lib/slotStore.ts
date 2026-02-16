@@ -40,6 +40,9 @@ export interface BookingLog {
   preferredDate: string;
   preferredTime: string;
   notes: string;
+  agreed_terms?: boolean;
+  agreed_consent?: boolean;
+  agreed_at?: string;
   isHandled?: boolean;
   handledAt?: string;
 }

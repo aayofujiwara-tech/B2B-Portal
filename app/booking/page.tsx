@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import ConsentCheckbox from "@/app/components/ConsentCheckbox";
 import { addBookingLog, sendBookingNotification } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
@@ -59,6 +60,8 @@ export default function BookingPage() {
     { date: "", timeSlot: "" },
   ]);
   const [notes, setNotes] = useState("");
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedConsent, setAgreedConsent] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -90,8 +93,9 @@ export default function BookingPage() {
     }
   };
 
-  const isFormValid =
+  const isFormComplete =
     facilityName && contactName && phone && dateSlots[0].date;
+  const isFormValid = isFormComplete && agreedTerms && agreedConsent;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +109,8 @@ export default function BookingPage() {
       .map((ds) => `${ds.date}${ds.timeSlot ? ` ${ds.timeSlot}` : ""}`)
       .join(" / ");
 
+    const agreedAt = new Date().toISOString();
+
     addBookingLog({
       facilityName,
       contactName,
@@ -113,6 +119,9 @@ export default function BookingPage() {
       preferredDate: dateSlots[0].date,
       preferredTime: dateSlots[0].timeSlot || "指定なし",
       notes: dateSlots.length > 1 ? `希望日程: ${allDates}\n${notes}` : notes,
+      agreed_terms: true,
+      agreed_consent: true,
+      agreed_at: agreedAt,
     });
 
     const isRepeater = !!getSavedContact();
@@ -363,10 +372,19 @@ export default function BookingPage() {
             />
           </div>
 
+          {/* Consent Checkboxes */}
+          <ConsentCheckbox
+            agreedTerms={agreedTerms}
+            agreedConsent={agreedConsent}
+            onChangeTerms={setAgreedTerms}
+            onChangeConsent={setAgreedConsent}
+          />
+
           {/* Submit */}
           <button
             type="submit"
             disabled={!isFormValid || isSubmitting}
+            aria-disabled={!isFormValid || isSubmitting}
             className={`w-full rounded-xl py-4 text-base font-bold text-white shadow-lg transition ${
               isFormValid && !isSubmitting
                 ? "bg-primary hover:bg-primary-dark active:scale-[0.98]"

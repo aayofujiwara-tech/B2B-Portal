@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import ConsentCheckbox from "@/app/components/ConsentCheckbox";
 import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
 import { getSlotConfig, FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
@@ -93,6 +94,8 @@ export default function TopPage() {
   const [facility, setFacility] = useState("");
   const [welfare, setWelfare] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedConsent, setAgreedConsent] = useState(false);
   const [savedContact, setSavedContact] = useState<SavedContact | null>(null);
   const [facilityRemaining, setFacilityRemaining] = useState<number | null>(null);
 
@@ -109,7 +112,8 @@ export default function TopPage() {
     }
   }, [facility]);
 
-  const isFormValid = disease && adl && gender && budget && timing && facility;
+  const isFormComplete = disease && adl && gender && budget && timing && facility;
+  const isFormValid = isFormComplete && agreedTerms && agreedConsent;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +131,9 @@ export default function TopPage() {
       facility,
       welfare: welfare ? "1" : "0",
       ...(dementiaLevel ? { dementiaLevel } : {}),
+      agreed_terms: "1",
+      agreed_consent: "1",
+      agreed_at: new Date().toISOString(),
     });
 
     setTimeout(() => {
@@ -445,10 +452,19 @@ export default function TopPage() {
             </div>
           </div>
 
+          {/* Consent Checkboxes */}
+          <ConsentCheckbox
+            agreedTerms={agreedTerms}
+            agreedConsent={agreedConsent}
+            onChangeTerms={setAgreedTerms}
+            onChangeConsent={setAgreedConsent}
+          />
+
           {/* Submit */}
           <button
             type="submit"
             disabled={!isFormValid || isSubmitting}
+            aria-disabled={!isFormValid || isSubmitting}
             className={`w-full rounded-xl py-4 text-base font-bold text-white shadow-lg transition ${
               isFormValid && !isSubmitting
                 ? "bg-primary hover:bg-primary-dark active:scale-[0.98]"
