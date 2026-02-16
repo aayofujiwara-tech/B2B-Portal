@@ -9,7 +9,6 @@ import {
   runAssessment,
   addAssessmentLog,
   sendAssessmentToGAS,
-  consumeSlot,
   getDiseaseNotes,
   getFacilityStrengths,
   getSlotConfig,
@@ -106,10 +105,6 @@ function ResultContent() {
       welfare,
       budget,
     });
-
-    if (assessmentResult.status === "acceptable" || assessmentResult.status === "safety_risk") {
-      consumeSlot(facility);
-    }
 
     setResult(assessmentResult);
     setDiseaseNotes(getDiseaseNotes(disease));
@@ -458,7 +453,7 @@ function ResultContent() {
             070-3244-5497（生田）に今すぐ電話する
           </a>
           <Link
-            href="/booking"
+            href={`/booking?facility=${encodeURIComponent(facility)}`}
             onClick={() =>
               trackEvent("booking_start", "click_booking_from_safety_risk")
             }
@@ -476,7 +471,7 @@ function ResultContent() {
       ) : isAcceptable ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/booking"
+            href={`/booking?facility=${encodeURIComponent(facility)}`}
             onClick={() =>
               trackEvent("booking_start", "click_booking_from_result")
             }
@@ -506,7 +501,7 @@ function ResultContent() {
             070-3244-5497（生田）に今すぐ電話する
           </a>
           <Link
-            href="/booking"
+            href={`/booking?facility=${encodeURIComponent(facility)}`}
             onClick={() =>
               trackEvent("booking_start", "click_booking_from_consultation")
             }
