@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import ConsentCheckbox from "@/app/components/ConsentCheckbox";
-import { addBookingLog, sendBookingNotification, consumeSlot } from "@/app/lib/slotStore";
+import { addBookingLog, sendBookingNotification } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
 const TIME_SLOT_OPTIONS = [
@@ -124,9 +124,13 @@ export default function BookingPage() {
       agreed_at: agreedAt,
     });
 
-    // 面談予約時に枠を消費（結果ページから渡された施設、なければ全施設から）
+    // 面談予約時に枠を消費（API経由でサーバーサイドに反映）
     const facilityParam = new URLSearchParams(window.location.search).get("facility") || "any";
-    consumeSlot(facilityParam);
+    fetch("/api/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "consume", facilityId: facilityParam }),
+    }).catch((err) => console.error("[slots] 枠消費エラー:", err));
 
     const isRepeater = !!getSavedContact();
 

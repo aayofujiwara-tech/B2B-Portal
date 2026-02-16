@@ -153,12 +153,19 @@ export default function AdminPage() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const loadData = () => {
-    const slots = {} as Record<FacilityId, SlotConfig>;
-    for (const id of FACILITY_IDS) {
-      slots[id] = getSlotConfig(id);
+  const loadData = async () => {
+    try {
+      const res = await fetch("/api/slots");
+      const slots = await res.json();
+      setFacilitySlots(slots as Record<FacilityId, SlotConfig>);
+    } catch {
+      // fallback to localStorage
+      const slots = {} as Record<FacilityId, SlotConfig>;
+      for (const id of FACILITY_IDS) {
+        slots[id] = getSlotConfig(id);
+      }
+      setFacilitySlots(slots);
     }
-    setFacilitySlots(slots);
     setAssessmentLogs(getAssessmentLogs());
     setBookingLogs(getBookingLogs());
     setNotifyEmails(getNotificationEmails());
@@ -178,10 +185,23 @@ export default function AdminPage() {
     return <AdminAuth onAuth={() => setAuthed(true)} />;
   }
 
-  const handleReload = (facilityId: FacilityId) => {
-    reloadSlots(newTotals[facilityId], facilityId);
+  const handleReload = async (facilityId: FacilityId) => {
+    try {
+      const res = await fetch("/api/slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reload", facilityId, totalSlots: newTotals[facilityId] }),
+      });
+      const result = await res.json();
+      if (result.slots) {
+        setFacilitySlots(result.slots as Record<FacilityId, SlotConfig>);
+      }
+    } catch {
+      // fallback to localStorage
+      reloadSlots(newTotals[facilityId], facilityId);
+      loadData();
+    }
     trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
-    loadData();
     showToast(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
   };
 

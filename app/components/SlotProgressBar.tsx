@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import {
-  getSlotConfig,
-  getAggregateSlots,
   FACILITY_IDS,
   FACILITY_LABELS,
   type FacilityId,
+  type SlotConfig,
 } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
 
@@ -32,28 +31,72 @@ export default function SlotProgressBar({ facilityId }: SlotProgressBarProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let t: number, u: number, ts: string;
-    if (facilityId && facilityId !== "any" && FACILITY_IDS.includes(facilityId as FacilityId)) {
-      const c = getSlotConfig(facilityId as FacilityId);
-      t = c.totalSlots;
-      u = c.usedSlots;
-      ts = c.lastReloadTimestamp || c.lastReloadDate;
-      setStatusLabel(FACILITY_LABELS[facilityId as FacilityId]);
-    } else {
-      const agg = getAggregateSlots();
-      t = agg.total;
-      u = agg.used;
-      ts = agg.lastReloadTimestamp;
-      setStatusLabel("全拠点合計");
-    }
-    setTotal(t);
-    setUsed(u);
-    setElapsed(getElapsedLabel(ts));
-    setReady(true);
-    trackEvent("slot_view", "view_progress_bar", `${t - u}/${t}`);
-    const timer = setInterval(() => setElapsed(getElapsedLabel(ts)), 60000);
-    return () => clearInterval(timer);
+    let cancelled = false;
+
+    fetch("/api/slots")
+      .then((res) => res.json())
+      .then((data: Record<string, SlotConfig>) => {
+        if (cancelled) return;
+
+        let t: number, u: number, ts: string;
+        if (facilityId && facilityId !== "any" && FACILITY_IDS.includes(facilityId as FacilityId)) {
+          const c = data[facilityId] || { totalSlots: 0, usedSlots: 0, lastReloadTimestamp: new Date().toISOString() };
+          t = c.totalSlots;
+          u = c.usedSlots;
+          ts = c.lastReloadTimestamp || c.lastReloadDate;
+          setStatusLabel(FACILITY_LABELS[facilityId as FacilityId]);
+        } else {
+          t = 0; u = 0; ts = "";
+          for (const id of FACILITY_IDS) {
+            const c = data[id];
+            if (c) {
+              t += c.totalSlots;
+              u += c.usedSlots;
+              if (c.lastReloadTimestamp > ts) ts = c.lastReloadTimestamp;
+            }
+          }
+          if (!ts) ts = new Date().toISOString();
+          setStatusLabel("全拠点合計");
+        }
+        setTotal(t);
+        setUsed(u);
+        setElapsed(getElapsedLabel(ts));
+        setReady(true);
+        trackEvent("slot_view", "view_progress_bar", `${t - u}/${t}`);
+      })
+      .catch(() => {
+        // API失敗時はデフォルト表示
+        if (!cancelled) setReady(true);
+      });
+
+    return () => { cancelled = true; };
   }, [facilityId]);
+
+  // 経過時間を定期更新
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setInterval(() => {
+      // re-fetch to get fresh data
+      fetch("/api/slots")
+        .then((res) => res.json())
+        .then((data: Record<string, SlotConfig>) => {
+          let t = 0, u = 0, ts = "";
+          if (facilityId && facilityId !== "any" && FACILITY_IDS.includes(facilityId as FacilityId)) {
+            const c = data[facilityId] || { totalSlots: 0, usedSlots: 0, lastReloadTimestamp: new Date().toISOString() };
+            t = c.totalSlots; u = c.usedSlots; ts = c.lastReloadTimestamp || c.lastReloadDate;
+          } else {
+            for (const id of FACILITY_IDS) {
+              const c = data[id];
+              if (c) { t += c.totalSlots; u += c.usedSlots; if (c.lastReloadTimestamp > ts) ts = c.lastReloadTimestamp; }
+            }
+            if (!ts) ts = new Date().toISOString();
+          }
+          setTotal(t); setUsed(u); setElapsed(getElapsedLabel(ts));
+        })
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [ready, facilityId]);
 
   if (!ready) {
     return <div className="h-24 animate-pulse rounded-xl bg-slate-100" />;

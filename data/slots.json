@@ -1,0 +1,23 @@
+{
+  "tsukamoto": {
+    "totalSlots": 0,
+    "usedSlots": 0,
+    "lastReloadDate": "2026-02-16",
+    "lastReloadTimestamp": "2026-02-16T00:00:00.000Z",
+    "status": "adjusting"
+  },
+  "utajima": {
+    "totalSlots": 0,
+    "usedSlots": 0,
+    "lastReloadDate": "2026-02-16",
+    "lastReloadTimestamp": "2026-02-16T00:00:00.000Z",
+    "status": "adjusting"
+  },
+  "toyoshin": {
+    "totalSlots": 0,
+    "usedSlots": 0,
+    "lastReloadDate": "2026-02-16",
+    "lastReloadTimestamp": "2026-02-16T00:00:00.000Z",
+    "status": "adjusting"
+  }
+}

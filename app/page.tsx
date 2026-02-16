@@ -8,7 +8,7 @@ import Footer from "@/app/components/Footer";
 import ConsentCheckbox from "@/app/components/ConsentCheckbox";
 import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
-import { getSlotConfig, FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
+import { FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
 import { type SavedContact, getSavedContact } from "@/app/booking/page";
 
 const DISEASE_OPTIONS = [
@@ -113,8 +113,17 @@ export default function TopPage() {
 
   useEffect(() => {
     if (facility && facility !== "any" && FACILITY_IDS.includes(facility as FacilityId)) {
-      const sc = getSlotConfig(facility as FacilityId);
-      setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
+      fetch("/api/slots")
+        .then((res) => res.json())
+        .then((data) => {
+          const sc = data[facility];
+          if (sc) {
+            setFacilityRemaining(Math.max(0, sc.totalSlots - sc.usedSlots));
+          } else {
+            setFacilityRemaining(null);
+          }
+        })
+        .catch(() => setFacilityRemaining(null));
     } else {
       setFacilityRemaining(null);
     }
