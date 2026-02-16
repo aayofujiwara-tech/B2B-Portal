@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-// Vercel serverless: filesystem is read-only except /tmp.
-// - RUNTIME_FILE (/tmp/slots.json): writable, used for live updates.
-// - SEED_FILE (data/slots.json): read-only, used as initial default.
-const RUNTIME_FILE = path.join("/tmp", "slots.json");
+const GAS_WEBHOOK_URL = process.env.GAS_WEBHOOK_URL || "";
+
+// data/slots.json — デプロイ時の初期値 (フォールバック用)
 const SEED_FILE = path.join(process.cwd(), "data", "slots.json");
 
 interface SlotConfig {
@@ -18,34 +17,101 @@ interface SlotConfig {
 
 type SlotsData = Record<string, SlotConfig>;
 
-function readSlots(): SlotsData {
-  // Try runtime file first (written by admin), then fall back to seed
-  for (const filePath of [RUNTIME_FILE, SEED_FILE]) {
-    try {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      return JSON.parse(raw);
-    } catch {
-      // file not found or invalid — try next
-    }
+function readSeedSlots(): SlotsData {
+  try {
+    const raw = fs.readFileSync(SEED_FILE, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return {};
   }
-  return {};
 }
 
-function writeSlots(data: SlotsData): void {
-  fs.writeFileSync(RUNTIME_FILE, JSON.stringify(data, null, 2), "utf-8");
+/** GAS doGet(?action=readSlots) からスロットデータを取得 */
+async function readSlotsFromGAS(): Promise<SlotsData> {
+  const url = `${GAS_WEBHOOK_URL}?action=readSlots`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
+
+  if (!res.ok) {
+    throw new Error(`GAS GET failed: ${res.status}`);
+  }
+
+  // GAS はリダイレクト（302）を返すことがある。fetch は自動追従する。
+  const data = await res.json();
+  return data as SlotsData;
 }
 
-// GET /api/slots — return all facility slot configs
+/** GAS doPost(type:"writeSlots") にスロットデータを書き込み */
+async function writeSlotsToGAS(data: SlotsData): Promise<void> {
+  const res = await fetch(GAS_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "writeSlots", body: data }),
+    signal: AbortSignal.timeout(5_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(`GAS POST failed: ${res.status}`);
+  }
+
+  const result = await res.json();
+  if (!result.ok) {
+    throw new Error(`GAS writeSlots error: ${result.error || "unknown"}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/slots — 全拠点のスロット設定を返す
+// ---------------------------------------------------------------------------
 export async function GET() {
-  const data = readSlots();
-  return NextResponse.json(data);
+  if (!GAS_WEBHOOK_URL) {
+    console.warn("[slots] GAS_WEBHOOK_URL が未設定です。初期値を返します");
+    return NextResponse.json(readSeedSlots());
+  }
+
+  try {
+    const data = await readSlotsFromGAS();
+    // GAS から空オブジェクトが返った場合（slots シート未作成）は初期値で返す
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json(readSeedSlots());
+    }
+    return NextResponse.json(data);
+  } catch (e) {
+    console.error("[slots] GAS 読み込みエラー:", e);
+    // フォールバック: data/slots.json
+    return NextResponse.json(readSeedSlots());
+  }
 }
 
-// POST /api/slots — update slot config for a facility
-// Body: { action: "reload", facilityId, totalSlots } or { action: "consume", facilityId }
+// ---------------------------------------------------------------------------
+// POST /api/slots — スロット設定を更新
+// Body: { action: "reload", facilityId, totalSlots }
+//     | { action: "consume", facilityId }
+// ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const data = readSlots();
+
+  if (!GAS_WEBHOOK_URL) {
+    return NextResponse.json(
+      { error: "GAS_WEBHOOK_URL が未設定です" },
+      { status: 500 },
+    );
+  }
+
+  // 現在のデータを取得
+  let data: SlotsData;
+  try {
+    data = await readSlotsFromGAS();
+    // GAS から空が返った場合は初期値を使う
+    if (Object.keys(data).length === 0) {
+      data = readSeedSlots();
+    }
+  } catch (e) {
+    console.error("[slots] GAS 読み込みエラー:", e);
+    return NextResponse.json(
+      { error: "Google Sheets からの読み込みに失敗しました", detail: String(e) },
+      { status: 500 },
+    );
+  }
 
   if (body.action === "reload") {
     const { facilityId, totalSlots } = body;
@@ -59,7 +125,16 @@ export async function POST(req: NextRequest) {
       lastReloadTimestamp: new Date().toISOString(),
       status: totalSlots > 0 ? "available" : "adjusting",
     };
-    writeSlots(data);
+
+    try {
+      await writeSlotsToGAS(data);
+    } catch (e) {
+      console.error("[slots] GAS 書き込みエラー:", e);
+      return NextResponse.json(
+        { error: "Google Sheets への書き込みに失敗しました", detail: String(e) },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ ok: true, slots: data });
   }
 
@@ -75,7 +150,16 @@ export async function POST(req: NextRequest) {
       if (slot && slot.usedSlots < slot.totalSlots) {
         slot.usedSlots += 1;
         if (slot.usedSlots >= slot.totalSlots) slot.status = "adjusting";
-        writeSlots(data);
+
+        try {
+          await writeSlotsToGAS(data);
+        } catch (e) {
+          console.error("[slots] GAS 書き込みエラー:", e);
+          return NextResponse.json(
+            { error: "Google Sheets への書き込みに失敗しました", detail: String(e) },
+            { status: 500 },
+          );
+        }
         return NextResponse.json({ ok: true, consumed: id, slots: data });
       }
     }

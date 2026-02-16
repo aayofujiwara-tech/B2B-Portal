@@ -1,21 +1,62 @@
 /**
- * ええすまいポータル 面談受付通知 — Google Apps Script
+ * ええすまいポータル — Google Apps Script
  *
  * 【使い方】
  * 1. Google スプレッドシートを新規作成し、シート名を「受付ログ」にする
  * 2. 「拡張機能 > Apps Script」を開き、このコードを貼り付ける
- * 3. 「デプロイ > 新しいデプロイ」→ 種類「ウェブアプリ」→ アクセス「全員」で公開
+ * 3. 「デプロイ > 新しいデプロイ」→ 種類「ウェブアプリ」→ 実行「自分」→ アクセス「全員」で公開
  * 4. 生成されたURLを .env.local の GAS_WEBHOOK_URL に設定する
  *
  * 【シート構成】
  * - 「受付ログ」: 面談予約の受付記録
  * - 「判定ログ」: 全ての判定結果を記録（申込に至らなかったケースも含む）
+ * - 「slots」  : 拠点ごとの空室スロットデータ（管理画面から更新）
  */
 
+// =========================================================================
+// doGet — GETリクエスト（データ読み込み用）
+// =========================================================================
+function doGet(e) {
+  try {
+    var action = (e && e.parameter && e.parameter.action) || "";
+
+    if (action === "readSlots") {
+      return readSlotsFromSheet();
+    }
+
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: "unknown action" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ ok: false, error: err.message })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// =========================================================================
+// doPost — POSTリクエスト（データ書き込み・通知用）
+// =========================================================================
 function doPost(e) {
   try {
     var json = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // --- スロットデータ書き込み ---
+    if (json.type === "writeSlots") {
+      writeSlotsToSheet(ss, json.body);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- スロットシート初期化 ---
+    if (json.type === "initSlots") {
+      initSlotsSheet(ss, json.body);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // --- 判定ログ専用リクエスト ---
     if (json.type === "assessment") {
@@ -112,6 +153,111 @@ function doPost(e) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+// =========================================================================
+// slots シート — 読み込み
+// =========================================================================
+function readSlotsFromSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("slots");
+
+  if (!sheet || sheet.getLastRow() <= 1) {
+    // シート未作成またはヘッダーのみ → 空オブジェクトを返す
+    return ContentService.createTextOutput(
+      JSON.stringify({})
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var data = sheet.getDataRange().getValues();
+  var result = {};
+  // 1行目はヘッダー → 2行目以降がデータ
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var facilityId = String(row[0] || "").trim();
+    if (!facilityId) continue;
+    result[facilityId] = {
+      totalSlots: Number(row[1]) || 0,
+      usedSlots: Number(row[2]) || 0,
+      lastReloadDate: String(row[3] || ""),
+      lastReloadTimestamp: String(row[4] || ""),
+      status: String(row[5]) === "available" ? "available" : "adjusting",
+    };
+  }
+
+  return ContentService.createTextOutput(
+    JSON.stringify(result)
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+// =========================================================================
+// slots シート — 書き込み（全拠点を一括上書き）
+// =========================================================================
+function writeSlotsToSheet(ss, slotsData) {
+  var HEADERS = ["facilityId", "totalSlots", "usedSlots", "lastReloadDate", "lastReloadTimestamp", "status"];
+  var sheet = getOrCreateSheet(ss, "slots", HEADERS);
+
+  // 既存データ行をクリア（ヘッダーは保持）
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, HEADERS.length).clearContent();
+  }
+
+  // 全拠点データを書き込み
+  var keys = Object.keys(slotsData);
+  if (keys.length === 0) return;
+
+  var rows = [];
+  for (var i = 0; i < keys.length; i++) {
+    var fid = keys[i];
+    var config = slotsData[fid];
+    rows.push([
+      fid,
+      config.totalSlots || 0,
+      config.usedSlots || 0,
+      config.lastReloadDate || "",
+      config.lastReloadTimestamp || "",
+      config.status || "adjusting",
+    ]);
+  }
+  sheet.getRange(2, 1, rows.length, HEADERS.length).setValues(rows);
+}
+
+// =========================================================================
+// slots シート — 初期化（シート未作成時のみ）
+// =========================================================================
+function initSlotsSheet(ss, seedData) {
+  var HEADERS = ["facilityId", "totalSlots", "usedSlots", "lastReloadDate", "lastReloadTimestamp", "status"];
+
+  // 既に存在する場合はスキップ
+  if (ss.getSheetByName("slots")) return;
+
+  var sheet = ss.insertSheet("slots");
+  sheet.appendRow(HEADERS);
+
+  if (seedData) {
+    var keys = Object.keys(seedData);
+    var rows = [];
+    for (var i = 0; i < keys.length; i++) {
+      var fid = keys[i];
+      var config = seedData[fid];
+      rows.push([
+        fid,
+        config.totalSlots || 0,
+        config.usedSlots || 0,
+        config.lastReloadDate || "",
+        config.lastReloadTimestamp || "",
+        config.status || "adjusting",
+      ]);
+    }
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, HEADERS.length).setValues(rows);
+    }
+  }
+}
+
+// =========================================================================
+// 共通ヘルパー
+// =========================================================================
 
 /**
  * シートを取得、存在しなければヘッダー付きで新規作成

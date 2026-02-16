@@ -340,13 +340,18 @@ export default function AdminPage() {
         body: JSON.stringify({ action: "reload", facilityId, totalSlots: newTotals[facilityId] }),
       });
       const result = await res.json();
+      if (!res.ok || result.error) {
+        console.error("[admin] リロードエラー:", result.error || result.detail);
+        showToast(`更新に失敗しました: ${result.error || "不明なエラー"}`);
+        return;
+      }
       if (result.slots) {
         setFacilitySlots(result.slots as Record<FacilityId, SlotConfig>);
       }
-    } catch {
-      // fallback to localStorage
-      reloadSlots(newTotals[facilityId], facilityId);
-      loadData();
+    } catch (e) {
+      console.error("[admin] リロードエラー:", e);
+      showToast("更新に失敗しました。ネットワーク接続を確認してください。");
+      return;
     }
     trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
     showToast(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
