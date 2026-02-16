@@ -529,29 +529,42 @@ function AdminPageContent() {
     return <AdminAuth onAuth={() => setAuthed(true)} />;
   }
 
-  const handleReload = async (facilityId: FacilityId) => {
-    try {
-      const res = await fetch("/api/slots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reload", facilityId, totalSlots: newTotals[facilityId] }),
-      });
-      const result = await res.json();
-      if (!res.ok || result.error) {
-        console.error("[admin] リロードエラー:", result.error || result.detail);
-        showToast(`更新に失敗しました: ${result.error || "不明なエラー"}`);
-        return;
-      }
-      if (result.slots) {
-        setFacilitySlots(result.slots as Record<FacilityId, SlotConfig>);
-      }
-    } catch (e) {
-      console.error("[admin] リロードエラー:", e);
-      showToast("更新に失敗しました。ネットワーク接続を確認してください。");
-      return;
-    }
-    trackEvent("admin_action", "reload_slots", `${facilityId}=${newTotals[facilityId]}`);
+  const handleReload = (facilityId: FacilityId) => {
+    const previousSlots = facilitySlots ? { ...facilitySlots } : null;
+    const totalSlots = newTotals[facilityId];
+    const now = new Date();
+    // 楽観的更新
+    setFacilitySlots((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [facilityId]: {
+          totalSlots,
+          usedSlots: 0,
+          lastReloadDate: now.toISOString().split("T")[0],
+          lastReloadTimestamp: now.toISOString(),
+          status: totalSlots > 0 ? "available" : "adjusting",
+        } as SlotConfig,
+      };
+    });
+    trackEvent("admin_action", "reload_slots", `${facilityId}=${totalSlots}`);
     showToast(`${FACILITY_LABELS[facilityId]}の空室状況を更新しました`);
+    // バックグラウンド POST
+    fetch("/api/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reload", facilityId, totalSlots }),
+    })
+      .then(async (res) => {
+        const result = await res.json();
+        if (!res.ok || result.error) throw new Error(result.error || "不明なエラー");
+        if (result.slots) setFacilitySlots(result.slots as Record<FacilityId, SlotConfig>);
+      })
+      .catch((e) => {
+        console.error("[admin] リロードエラー:", e);
+        if (previousSlots) setFacilitySlots(previousSlots);
+        showToast("更新に失敗しました。ネットワーク接続を確認してください。");
+      });
   };
 
   // --- Delete handlers ---

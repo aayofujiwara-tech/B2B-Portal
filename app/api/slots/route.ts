@@ -118,20 +118,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 現在のデータを取得
+  // 現在のデータを取得（キャッシュ優先で GAS 往復を削減）
   let data: SlotsData;
-  try {
-    data = await readSlotsFromGAS();
-    // GAS から空が返った場合は初期値を使う
-    if (Object.keys(data).length === 0) {
-      data = readSeedSlots();
+  if (cache && Object.keys(cache.data).length > 0) {
+    data = { ...cache.data };
+  } else {
+    try {
+      data = await readSlotsFromGAS();
+      if (Object.keys(data).length === 0) {
+        data = readSeedSlots();
+      }
+    } catch (e) {
+      console.error("[slots] GAS 読み込みエラー:", e);
+      return NextResponse.json(
+        { error: "Google Sheets からの読み込みに失敗しました", detail: String(e) },
+        { status: 500 },
+      );
     }
-  } catch (e) {
-    console.error("[slots] GAS 読み込みエラー:", e);
-    return NextResponse.json(
-      { error: "Google Sheets からの読み込みに失敗しました", detail: String(e) },
-      { status: 500 },
-    );
   }
 
   if (body.action === "reload") {
