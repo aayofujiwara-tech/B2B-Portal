@@ -21,6 +21,11 @@ interface AssessmentLogEntry {
 const CACHE_TTL_MS = 60 * 1000; // 60秒
 let cache: { data: AssessmentLogEntry[]; timestamp: number } | null = null;
 
+/** キャッシュを無効化する（書き込み後に呼び出す） */
+export function invalidateAssessmentLogsCache() {
+  cache = null;
+}
+
 async function readAssessmentLogsFromGAS(): Promise<AssessmentLogEntry[]> {
   const url = `${GAS_WEBHOOK_URL}?action=readAssessmentLogs`;
   const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });

@@ -78,7 +78,9 @@ function doPost(e) {
     var body = json.body;
 
     // 1. 受付ログシートへ記録
-    var sheet = getOrCreateSheet(ss, "受付ログ", [
+    //    参照用シート（受付ログ）: 直近30件のみ保持
+    //    蓄積用シート（受付ログ_履歴）: 全件を末尾に追加
+    var RECEPTION_HEADERS = [
       "受付日時",
       "施設名",
       "予約者名",
@@ -93,7 +95,9 @@ function doPost(e) {
       "判定補足",
       "備考",
       "リピーター",
-    ]);
+    ];
+
+    var sheet = getOrCreateSheet(ss, "受付ログ", RECEPTION_HEADERS);
 
     var dates = body.preferredDates || [];
     var d1 = dates[0] ? dates[0].date + " " + (dates[0].timeSlot || "指定なし") : "";
@@ -102,7 +106,7 @@ function doPost(e) {
 
     var assessment = body.assessmentResult || {};
 
-    sheet.appendRow([
+    var receptionRowData = [
       new Date(),
       body.facilityName || "",
       body.contactName || "",
@@ -117,7 +121,19 @@ function doPost(e) {
       assessment.reason || "",
       body.notes || "",
       body.isRepeater ? "はい" : "いいえ",
-    ]);
+    ];
+
+    // --- 参照用シート（直近30件） ---
+    sheet.insertRowAfter(1);
+    sheet.getRange(2, 1, 1, receptionRowData.length).setValues([receptionRowData]);
+    var receptionLastRow = sheet.getLastRow();
+    if (receptionLastRow > 31) {
+      sheet.deleteRows(32, receptionLastRow - 31);
+    }
+
+    // --- 蓄積用シート（全件保持） ---
+    var receptionHistorySheet = getOrCreateSheet(ss, "受付ログ_履歴", RECEPTION_HEADERS);
+    receptionHistorySheet.appendRow(receptionRowData);
 
     // 2. 判定ログシートへの補完記録
     // 判定時に source="direct" で既に記録済みのため、受付時は重複計上を避け
@@ -397,9 +413,12 @@ function getOrCreateSheet(ss, name, headers) {
 /**
  * 判定ログシートへ1行追記する
  * 申込に至らなかったケースも含め市場ニーズを可視化するために使用
+ *
+ * 参照用シート（判定ログ）: 直近30件のみ保持。ヘッダー直下に挿入し、31件目以降を削除
+ * 蓄積用シート（判定ログ_履歴）: 全件を末尾に追加。削除しない
  */
 function recordAssessmentLog(ss, data) {
-  var sheet = getOrCreateSheet(ss, "判定ログ", [
+  var HEADERS = [
     "記録日時",
     "施設名",
     "判定結果",
@@ -411,9 +430,9 @@ function recordAssessmentLog(ss, data) {
     "判定補足",
     "リピーター",
     "記録元",
-  ]);
+  ];
 
-  sheet.appendRow([
+  var rowData = [
     new Date(),
     data.facilityName || "",
     data.result || "",
@@ -425,7 +444,22 @@ function recordAssessmentLog(ss, data) {
     data.reason || "",
     data.isRepeater || "",
     data.source || "direct",
-  ]);
+  ];
+
+  // --- 参照用シート（直近30件） ---
+  var sheet = getOrCreateSheet(ss, "判定ログ", HEADERS);
+  // ヘッダー直下（2行目）に挿入
+  sheet.insertRowAfter(1);
+  sheet.getRange(2, 1, 1, rowData.length).setValues([rowData]);
+  // 31件を超える行を削除（ヘッダー + 30データ行 = 31行まで）
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 31) {
+    sheet.deleteRows(32, lastRow - 31);
+  }
+
+  // --- 蓄積用シート（全件保持） ---
+  var historySheet = getOrCreateSheet(ss, "判定ログ_履歴", HEADERS);
+  historySheet.appendRow(rowData);
 }
 
 /**

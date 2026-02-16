@@ -317,6 +317,8 @@ export default function AdminPage() {
   const [assessmentLogs, setAssessmentLogs] = useState<AssessmentLog[]>([]);
   const [bookingLogs, setBookingLogs] = useState<BookingLog[]>([]);
   const [notifyEmails, setNotifyEmails] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [activeTab, setActiveTab] = useState<
@@ -339,37 +341,67 @@ export default function AdminPage() {
   };
 
   const loadData = async () => {
-    try {
-      const res = await fetch("/api/slots");
-      const slots = await res.json();
-      setFacilitySlots(slots as Record<FacilityId, SlotConfig>);
-    } catch {
-      // fallback to localStorage
+    setLoading(true);
+    setLoadError("");
+
+    // スロット・判定ログ・受付ログを Promise.all で並列取得
+    const [slotsResult, assessmentsResult, bookingsResult] = await Promise.all([
+      fetch("/api/slots")
+        .then((r) => r.json())
+        .then((data) => ({ ok: true as const, data: data as Record<FacilityId, SlotConfig> }))
+        .catch(() => ({ ok: false as const, data: null })),
+      fetch("/api/assessment-logs")
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data) => ({ ok: true as const, data: data as AssessmentLog[] }))
+        .catch(() => ({ ok: false as const, data: null })),
+      fetch("/api/booking-logs")
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data) => ({ ok: true as const, data: data as BookingLog[] }))
+        .catch(() => ({ ok: false as const, data: null })),
+    ]);
+
+    // スロット
+    if (slotsResult.ok && slotsResult.data) {
+      setFacilitySlots(slotsResult.data);
+    } else {
       const slots = {} as Record<FacilityId, SlotConfig>;
       for (const id of FACILITY_IDS) {
         slots[id] = getSlotConfig(id);
       }
       setFacilitySlots(slots);
     }
-    // 判定ログ: API（スプレッドシート）→ localStorage オーバーレイとマージ
-    try {
-      const aRes = await fetch("/api/assessment-logs");
-      const apiAssessments = await aRes.json();
-      setAssessmentLogs(mergeAssessmentOverlay(apiAssessments));
-    } catch {
+
+    // 判定ログ
+    if (assessmentsResult.ok && assessmentsResult.data) {
+      setAssessmentLogs(mergeAssessmentOverlay(assessmentsResult.data));
+    } else {
       setAssessmentLogs([]);
     }
 
-    // 受付ログ: API（スプレッドシート）→ localStorage オーバーレイとマージ
-    try {
-      const bRes = await fetch("/api/booking-logs");
-      const apiBookings = await bRes.json();
-      setBookingLogs(mergeBookingOverlay(apiBookings));
-    } catch {
+    // 受付ログ
+    if (bookingsResult.ok && bookingsResult.data) {
+      setBookingLogs(mergeBookingOverlay(bookingsResult.data));
+    } else {
       setBookingLogs([]);
     }
 
+    // エラー表示（ログ取得に両方失敗した場合のみ）
+    if (!assessmentsResult.ok && !bookingsResult.ok) {
+      setLoadError("ログデータの取得に失敗しました。ネットワーク接続を確認してください。");
+    } else if (!assessmentsResult.ok) {
+      setLoadError("判定ログの取得に失敗しました。");
+    } else if (!bookingsResult.ok) {
+      setLoadError("受付ログの取得に失敗しました。");
+    }
+
     setNotifyEmails(getNotificationEmails());
+    setLoading(false);
   };
 
   // Session check on mount
@@ -588,12 +620,24 @@ export default function AdminPage() {
     });
   };
 
-  if (!facilitySlots) {
+  if (!facilitySlots || loading) {
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex flex-1 items-center justify-center">
-          <p className="text-muted">読み込み中...</p>
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+          <h1 className="mb-6 text-2xl font-bold text-slate-800">管理画面</h1>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-3 h-5 w-32 rounded bg-slate-200" />
+                <div className="grid grid-cols-4 gap-3">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-16 rounded-lg bg-slate-100" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </main>
         <Footer />
       </div>
@@ -645,6 +689,13 @@ export default function AdminPage() {
             CSVバックアップ
           </button>
         </div>
+
+        {/* Error banner */}
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm font-medium text-red-700">{loadError}</p>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:flex">

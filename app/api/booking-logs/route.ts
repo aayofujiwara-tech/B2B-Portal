@@ -20,6 +20,11 @@ interface BookingLogEntry {
 const CACHE_TTL_MS = 60 * 1000; // 60秒
 let cache: { data: BookingLogEntry[]; timestamp: number } | null = null;
 
+/** キャッシュを無効化する（書き込み後に呼び出す） */
+export function invalidateBookingLogsCache() {
+  cache = null;
+}
+
 async function readBookingLogsFromGAS(): Promise<BookingLogEntry[]> {
   const url = `${GAS_WEBHOOK_URL}?action=readReceptionLogs`;
   const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
