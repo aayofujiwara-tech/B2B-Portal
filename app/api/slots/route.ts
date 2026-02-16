@@ -17,6 +17,12 @@ interface SlotConfig {
 
 type SlotsData = Record<string, SlotConfig>;
 
+// ---------------------------------------------------------------------------
+// メモリキャッシュ（サーバーレス関数のライフタイム中は保持される）
+// ---------------------------------------------------------------------------
+const CACHE_TTL_MS = 60 * 1000; // 60秒
+let cache: { data: SlotsData; timestamp: number } | null = null;
+
 function readSeedSlots(): SlotsData {
   try {
     const raw = fs.readFileSync(SEED_FILE, "utf-8");
@@ -68,16 +74,27 @@ export async function GET() {
     return NextResponse.json(readSeedSlots());
   }
 
+  // キャッシュが有効期限内ならキャッシュから即返す
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL_MS) {
+    return NextResponse.json(cache.data);
+  }
+
   try {
     const data = await readSlotsFromGAS();
     // GAS から空オブジェクトが返った場合（slots シート未作成）は初期値で返す
     if (Object.keys(data).length === 0) {
       return NextResponse.json(readSeedSlots());
     }
+    // キャッシュを更新
+    cache = { data, timestamp: Date.now() };
     return NextResponse.json(data);
   } catch (e) {
     console.error("[slots] GAS 読み込みエラー:", e);
-    // フォールバック: data/slots.json
+    // GAS接続エラー時: 期限切れキャッシュがあればフォールバックとして使う
+    if (cache) {
+      return NextResponse.json(cache.data);
+    }
+    // キャッシュもなければ data/slots.json からフォールバック
     return NextResponse.json(readSeedSlots());
   }
 }
@@ -135,6 +152,8 @@ export async function POST(req: NextRequest) {
         { status: 500 },
       );
     }
+    // 書き込み成功後、キャッシュを即座に更新
+    cache = { data, timestamp: Date.now() };
     return NextResponse.json({ ok: true, slots: data });
   }
 
@@ -160,6 +179,8 @@ export async function POST(req: NextRequest) {
             { status: 500 },
           );
         }
+        // 書き込み成功後、キャッシュを即座に更新
+        cache = { data, timestamp: Date.now() };
         return NextResponse.json({ ok: true, consumed: id, slots: data });
       }
     }
