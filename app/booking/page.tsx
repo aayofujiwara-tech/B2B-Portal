@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import ConsentCheckbox from "@/app/components/ConsentCheckbox";
 import { addBookingLog, sendBookingNotification } from "@/app/lib/slotStore";
 import { trackEvent } from "@/app/lib/analytics";
+
+const ConsentCheckbox = dynamic(
+  () => import("@/app/components/ConsentCheckbox"),
+  {
+    loading: () => (
+      <div className="h-40 animate-pulse rounded-xl border border-slate-200 bg-slate-50" />
+    ),
+  },
+);
 
 const TIME_SLOT_OPTIONS = [
   { value: "", label: "指定なし" },

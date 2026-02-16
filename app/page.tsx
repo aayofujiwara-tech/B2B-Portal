@@ -3,11 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
-import ConsentCheckbox from "@/app/components/ConsentCheckbox";
-import SlotProgressBar from "@/app/components/SlotProgressBar";
 import { trackEvent } from "@/app/lib/analytics";
+
+const ConsentCheckbox = dynamic(
+  () => import("@/app/components/ConsentCheckbox"),
+  {
+    loading: () => (
+      <div className="h-40 animate-pulse rounded-xl border border-slate-200 bg-slate-50" />
+    ),
+  },
+);
+
+const SlotProgressBar = dynamic(
+  () => import("@/app/components/SlotProgressBar"),
+  {
+    loading: () => (
+      <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+    ),
+  },
+);
 import { FACILITY_IDS, type FacilityId } from "@/app/lib/slotStore";
 import { type SavedContact, getSavedContact } from "@/app/booking/page";
 

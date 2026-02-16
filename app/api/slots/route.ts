@@ -74,28 +74,32 @@ export async function GET() {
     return NextResponse.json(readSeedSlots());
   }
 
+  const cacheHeaders = {
+    "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+  };
+
   // キャッシュが有効期限内ならキャッシュから即返す
   if (cache && Date.now() - cache.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cache.data);
+    return NextResponse.json(cache.data, { headers: cacheHeaders });
   }
 
   try {
     const data = await readSlotsFromGAS();
     // GAS から空オブジェクトが返った場合（slots シート未作成）は初期値で返す
     if (Object.keys(data).length === 0) {
-      return NextResponse.json(readSeedSlots());
+      return NextResponse.json(readSeedSlots(), { headers: cacheHeaders });
     }
     // キャッシュを更新
     cache = { data, timestamp: Date.now() };
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: cacheHeaders });
   } catch (e) {
     console.error("[slots] GAS 読み込みエラー:", e);
     // GAS接続エラー時: 期限切れキャッシュがあればフォールバックとして使う
     if (cache) {
-      return NextResponse.json(cache.data);
+      return NextResponse.json(cache.data, { headers: cacheHeaders });
     }
     // キャッシュもなければ data/slots.json からフォールバック
-    return NextResponse.json(readSeedSlots());
+    return NextResponse.json(readSeedSlots(), { headers: cacheHeaders });
   }
 }
 

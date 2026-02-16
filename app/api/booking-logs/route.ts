@@ -41,26 +41,30 @@ async function readBookingLogsFromGAS(): Promise<BookingLogEntry[]> {
 // GET /api/booking-logs — 受付ログ一覧を返す
 // ---------------------------------------------------------------------------
 export async function GET() {
+  const cacheHeaders = {
+    "Cache-Control": "s-maxage=300, stale-while-revalidate=60",
+  };
+
   if (!GAS_WEBHOOK_URL) {
     console.warn("[booking-logs] GAS_WEBHOOK_URL が未設定です");
-    return NextResponse.json([]);
+    return NextResponse.json([], { headers: cacheHeaders });
   }
 
   // キャッシュが有効期限内ならキャッシュから即返す
   if (cache && Date.now() - cache.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cache.data);
+    return NextResponse.json(cache.data, { headers: cacheHeaders });
   }
 
   try {
     const data = await readBookingLogsFromGAS();
     // キャッシュを更新
     cache = { data, timestamp: Date.now() };
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: cacheHeaders });
   } catch (e) {
     console.error("[booking-logs] GAS 読み込みエラー:", e);
     // GAS接続エラー時: 期限切れキャッシュがあればフォールバック
     if (cache) {
-      return NextResponse.json(cache.data);
+      return NextResponse.json(cache.data, { headers: cacheHeaders });
     }
     return NextResponse.json([], { status: 500 });
   }
