@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/", label: "入居判定" },
   { href: "/booking", label: "面談予約" },
-  { href: "/admin", label: "管理画面" },
 ];
 
 export default function Header() {
