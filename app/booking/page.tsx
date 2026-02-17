@@ -266,7 +266,7 @@ export default function BookingPage() {
 
             <div className="mb-4">
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                病院・施設名 <span className="text-danger">*</span>
+                病院・施設名・自宅など <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
