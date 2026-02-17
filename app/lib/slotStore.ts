@@ -430,10 +430,6 @@ export async function sendBookingNotification(
   }
 ): Promise<{ ok: boolean; payload: BookingNotificationPayload | null }> {
   const recipients = getNotificationEmails();
-  if (recipients.length === 0) {
-    console.warn("[notify] 通知先未設定のためスキップ");
-    return { ok: false, payload: null };
-  }
 
   // 直近の判定結果を取得
   const assessmentLogs = getAssessmentLogs();

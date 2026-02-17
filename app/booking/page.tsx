@@ -73,6 +73,7 @@ export default function BookingPage() {
   const [agreedConsent, setAgreedConsent] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notifyError, setNotifyError] = useState("");
 
   useEffect(() => {
     const saved = getSavedContact();
@@ -143,7 +144,7 @@ export default function BookingPage() {
 
     const isRepeater = !!getSavedContact();
 
-    // GASへ通知送信（非同期・失敗しても受付は完了扱い）
+    // GASへ通知送信（非同期・画面遷移はブロックしない）
     sendBookingNotification({
       facilityName,
       contactName,
@@ -154,7 +155,15 @@ export default function BookingPage() {
       notes,
       allDateSlots: dateSlots.filter((ds) => ds.date),
       isRepeater,
-    }).catch((err) => console.error("[notify] 送信失敗:", err));
+    })
+      .then((result) => {
+        if (!result.ok) {
+          setNotifyError("受付データの送信に失敗しました。お手数ですがお電話にてご連絡ください。");
+        }
+      })
+      .catch(() => {
+        setNotifyError("受付データの送信に失敗しました。お手数ですがお電話にてご連絡ください。");
+      });
 
     saveContact({ facilityName, contactName, phone, email });
 
@@ -215,6 +224,14 @@ export default function BookingPage() {
                 ))}
               </dl>
             </div>
+            {notifyError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-left">
+                <p className="text-sm font-medium text-red-700">{notifyError}</p>
+                <p className="mt-1 text-xs text-red-600">
+                  電話: <a href="tel:07032445497" className="underline">070-3244-5497</a>（担当：生田）
+                </p>
+              </div>
+            )}
             <a
               href="/"
               className="inline-block rounded-lg bg-primary px-6 py-3 text-sm font-bold text-white transition hover:bg-primary-dark"
