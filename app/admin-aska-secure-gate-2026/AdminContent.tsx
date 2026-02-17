@@ -6,7 +6,7 @@ import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import {
   getSlotConfig,
-  getNotificationEmails,
+  fetchNotificationEmails,
   saveNotificationEmails,
   FACILITY_IDS,
   FACILITY_LABELS,
@@ -497,7 +497,7 @@ function AdminPageContent() {
       setLoadError("受付ログの取得に失敗しました。");
     }
 
-    setNotifyEmails(getNotificationEmails());
+    fetchNotificationEmails().then((emails) => setNotifyEmails(emails));
     setLoading(false);
   };
 
@@ -1388,7 +1388,7 @@ function AdminPageContent() {
                   onChange={(e) => { setNewEmail(e.target.value); setEmailError(""); }}
                   placeholder="example@company.com"
                   className="flex-1 rounded-lg border border-slate-300 px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 sm:py-2.5 sm:text-sm"
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const email = newEmail.trim();
@@ -1401,15 +1401,21 @@ function AdminPageContent() {
                         return;
                       }
                       const updated = [...notifyEmails, email];
-                      saveNotificationEmails(updated);
                       setNotifyEmails(updated);
                       setNewEmail("");
+                      const ok = await saveNotificationEmails(updated);
+                      if (!ok) {
+                        setEmailError("保存に失敗しました。再度お試しください。");
+                        setNotifyEmails(notifyEmails);
+                      } else {
+                        showToast("通知先を追加しました");
+                      }
                     }
                   }}
                 />
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const email = newEmail.trim();
                     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
                       setEmailError("有効なメールアドレスを入力してください");
@@ -1420,9 +1426,15 @@ function AdminPageContent() {
                       return;
                     }
                     const updated = [...notifyEmails, email];
-                    saveNotificationEmails(updated);
                     setNotifyEmails(updated);
                     setNewEmail("");
+                    const ok = await saveNotificationEmails(updated);
+                    if (!ok) {
+                      setEmailError("保存に失敗しました。再度お試しください。");
+                      setNotifyEmails(notifyEmails);
+                    } else {
+                      showToast("通知先を追加しました");
+                    }
                   }}
                   className="rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white transition hover:bg-primary-dark active:scale-[0.98] sm:py-2.5"
                 >
@@ -1448,10 +1460,16 @@ function AdminPageContent() {
                       <span className="text-sm text-slate-700">{em}</span>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           const updated = notifyEmails.filter((_, idx) => idx !== i);
-                          saveNotificationEmails(updated);
                           setNotifyEmails(updated);
+                          const ok = await saveNotificationEmails(updated);
+                          if (!ok) {
+                            setEmailError("削除に失敗しました。再度お試しください。");
+                            setNotifyEmails(notifyEmails);
+                          } else {
+                            showToast("通知先を削除しました");
+                          }
                         }}
                         className="flex h-[44px] w-[44px] items-center justify-center rounded text-slate-400 transition hover:bg-red-50 hover:text-red-500"
                         aria-label="削除"

@@ -337,19 +337,32 @@ export function getDiseaseNotes(disease: string): DiseaseNote[] {
   return notes;
 }
 
-// --- Notification Email Management ---
+// --- Notification Email Management (スプレッドシート連携) ---
 
-const NOTIFICATION_EMAILS_KEY = "b2b_notification_emails";
-
-export function getNotificationEmails(): string[] {
-  if (typeof window === "undefined") return [];
-  const stored = localStorage.getItem(NOTIFICATION_EMAILS_KEY);
-  return stored ? JSON.parse(stored) : [];
+export async function fetchNotificationEmails(): Promise<string[]> {
+  try {
+    const res = await fetch("/api/notify?action=readNotificationEmails");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.emails || [];
+  } catch {
+    console.error("[notify] 通知先メール取得エラー");
+    return [];
+  }
 }
 
-export function saveNotificationEmails(emails: string[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(NOTIFICATION_EMAILS_KEY, JSON.stringify(emails));
+export async function saveNotificationEmails(emails: string[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "writeNotificationEmails", emails }),
+    });
+    return res.ok;
+  } catch {
+    console.error("[notify] 通知先メール保存エラー");
+    return false;
+  }
 }
 
 // --- Assessment GAS送信 (判定即時記録) ---
@@ -402,7 +415,6 @@ export async function sendAssessmentToGAS(input: {
 // --- Booking Notification Service (GAS連携) ---
 
 export interface BookingNotificationPayload {
-  to: string[];
   subject: string;
   body: {
     facilityName: string;
@@ -429,14 +441,11 @@ export async function sendBookingNotification(
     isRepeater?: boolean;
   }
 ): Promise<{ ok: boolean; payload: BookingNotificationPayload | null }> {
-  const recipients = getNotificationEmails();
-
   // 直近の判定結果を取得
   const assessmentLogs = getAssessmentLogs();
   const latest = assessmentLogs.length > 0 ? assessmentLogs[0] : null;
 
   const payload: BookingNotificationPayload = {
-    to: recipients,
     subject: `【要確認】ええすまいポータルより面談受付が入りました（施設名：${booking.facilityName}）`,
     body: {
       facilityName: booking.facilityName,

@@ -32,6 +32,10 @@ function doGet(e) {
       return readReceptionLogsFromSheet();
     }
 
+    if (action === "readNotificationEmails") {
+      return readNotificationEmailsFromSheet();
+    }
+
     return ContentService.createTextOutput(
       JSON.stringify({ error: "unknown action" })
     ).setMimeType(ContentService.MimeType.JSON);
@@ -61,6 +65,14 @@ function doPost(e) {
     // --- スロットシート初期化 ---
     if (json.type === "initSlots") {
       initSlotsSheet(ss, json.body);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- 通知先メールアドレス書き込み ---
+    if (json.type === "writeNotificationEmails") {
+      writeNotificationEmailsToSheet(ss, json.emails || []);
       return ContentService.createTextOutput(
         JSON.stringify({ ok: true })
       ).setMimeType(ContentService.MimeType.JSON);
@@ -153,8 +165,8 @@ function doPost(e) {
       });
     }
 
-    // 3. メール送信
-    var recipients = json.to || [];
+    // 3. メール送信（「通知設定」シートからメールアドレスを読み取り）
+    var recipients = getNotificationEmailsFromSheet_internal(ss);
     if (recipients.length > 0) {
       var subject = json.subject || "【要確認】ええすまいポータル面談受付";
       var emailBody = buildEmailBody(body, dates, assessment);
@@ -465,6 +477,63 @@ function recordAssessmentLog(ss, data) {
 /**
  * メール本文を整形する
  */
+// =========================================================================
+// 通知設定シート — 内部読み取り（スプレッドシートオブジェクト渡し）
+// =========================================================================
+function getNotificationEmailsFromSheet_internal(ss) {
+  var sheet = ss.getSheetByName("通知設定");
+  if (!sheet) {
+    sheet = ss.insertSheet("通知設定");
+    sheet.appendRow(["email"]);
+    return [];
+  }
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  var values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  var emails = [];
+  for (var i = 0; i < values.length; i++) {
+    var addr = String(values[i][0] || "").trim();
+    if (addr) emails.push(addr);
+  }
+  return emails;
+}
+
+// =========================================================================
+// 通知設定シート — doGet用読み取り（JSON応答）
+// =========================================================================
+function readNotificationEmailsFromSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var emails = getNotificationEmailsFromSheet_internal(ss);
+  return ContentService.createTextOutput(
+    JSON.stringify({ emails: emails })
+  ).setMimeType(ContentService.MimeType.JSON);
+}
+
+// =========================================================================
+// 通知設定シート — doPost用書き込み
+// =========================================================================
+function writeNotificationEmailsToSheet(ss, emails) {
+  var HEADERS = ["email"];
+  var sheet = getOrCreateSheet(ss, "通知設定", HEADERS);
+
+  // 既存データ行をクリア（ヘッダーは保持）
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, 1).clearContent();
+  }
+
+  // メールアドレスを書き込み
+  if (emails.length === 0) return;
+  var rows = [];
+  for (var i = 0; i < emails.length; i++) {
+    var addr = String(emails[i] || "").trim();
+    if (addr) rows.push([addr]);
+  }
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, 1).setValues(rows);
+  }
+}
+
 function buildEmailBody(body, dates, assessment) {
   var lines = [];
 
