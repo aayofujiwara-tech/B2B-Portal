@@ -5,14 +5,16 @@ const GAS_WEBHOOK_URL = process.env.GAS_WEBHOOK_URL || "";
 interface AssessmentLogEntry {
   id: string;
   timestamp: string;
+  facilityName?: string;
   disease: string;
   adl: string;
   dementiaLevel?: string;
+  welfare?: string;
   budget: string;
   result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
-  gender: string;
-  timing: string;
+  isRepeater?: string;
+  source?: string;
 }
 
 // ---------------------------------------------------------------------------

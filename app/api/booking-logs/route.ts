@@ -11,7 +11,16 @@ interface BookingLogEntry {
   email: string;
   preferredDate: string;
   preferredTime: string;
+  preferredDate2?: string;
+  preferredTime2?: string;
+  preferredDate3?: string;
+  preferredTime3?: string;
+  assessmentStatus?: string;
+  assessmentDisease?: string;
+  assessmentAdl?: string;
+  assessmentReason?: string;
   notes: string;
+  isRepeater?: string;
 }
 
 // ---------------------------------------------------------------------------

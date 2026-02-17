@@ -320,14 +320,16 @@ function readAssessmentLogsFromSheet() {
     logs.push({
       id: "a-" + i,
       timestamp: isoTimestamp,
+      facilityName: String(row[1] || ""),
       disease: String(row[3] || ""),
       adl: String(row[4] || ""),
       dementiaLevel: String(row[5] || ""),
+      welfare: String(row[6] || ""),
       budget: String(row[7] || ""),
       result: result,
       reason: String(row[8] || ""),
-      gender: "",
-      timing: "",
+      isRepeater: String(row[9] || ""),
+      source: String(row[10] || ""),
     });
   }
 
@@ -377,11 +379,16 @@ function readReceptionLogsFromSheet() {
       ? rawTimestamp.toISOString()
       : String(rawTimestamp || "");
 
-    // 第1希望から日付と時間を分離（例: "2026-02-20 午前" → date="2026-02-20", time="午前"）
-    var pref1 = String(row[5] || "");
-    var prefParts = pref1.split(" ");
-    var preferredDate = prefParts[0] || "";
-    var preferredTime = prefParts.slice(1).join(" ") || "";
+    // 第1〜3希望から日付と時間を分離（例: "2026-02-20 午前" → date="2026-02-20", time="午前"）
+    function parseDateSlot(raw) {
+      var s = String(raw || "");
+      if (!s) return { date: "", time: "" };
+      var parts = s.split(" ");
+      return { date: parts[0] || "", time: parts.slice(1).join(" ") || "" };
+    }
+    var pref1 = parseDateSlot(row[5]);
+    var pref2 = parseDateSlot(row[6]);
+    var pref3 = parseDateSlot(row[7]);
 
     logs.push({
       id: "b-" + i,
@@ -390,9 +397,18 @@ function readReceptionLogsFromSheet() {
       contactName: String(row[2] || ""),
       phone: String(row[3] || ""),
       email: String(row[4] || ""),
-      preferredDate: preferredDate,
-      preferredTime: preferredTime,
+      preferredDate: pref1.date,
+      preferredTime: pref1.time,
+      preferredDate2: pref2.date,
+      preferredTime2: pref2.time,
+      preferredDate3: pref3.date,
+      preferredTime3: pref3.time,
+      assessmentStatus: String(row[8] || ""),
+      assessmentDisease: String(row[9] || ""),
+      assessmentAdl: String(row[10] || ""),
+      assessmentReason: String(row[11] || ""),
       notes: String(row[12] || ""),
+      isRepeater: String(row[13] || ""),
     });
   }
 

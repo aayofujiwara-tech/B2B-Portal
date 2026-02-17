@@ -431,6 +431,8 @@ function AdminPageContent() {
     onConfirm: () => void;
   } | null>(null);
   const [cleanupDate, setCleanupDate] = useState("");
+  const [expandedAssessments, setExpandedAssessments] = useState<Set<string>>(new Set());
+  const [expandedBookings, setExpandedBookings] = useState<Set<string>>(new Set());
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -634,14 +636,16 @@ function AdminPageContent() {
     const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 
     const assessmentHeader = [
-      "種別", "ID", "タイムスタンプ", "判定結果", "疾患", "疾患詳細", "ADL",
-      "認知症レベル", "医療機器", "障害等級", "自傷", "他害",
+      "種別", "ID", "タイムスタンプ", "拠点名", "判定結果", "疾患", "疾患詳細", "ADL",
+      "認知症レベル", "生活保護", "医療機器", "障害等級", "自傷", "他害",
       "性別", "予算", "時期", "理由",
-      "トリガーフラグ", "対応済", "対応日時",
+      "トリガーフラグ", "リピーター", "記録元", "対応済", "対応日時",
     ];
     const bookingHeader = [
       "種別", "ID", "タイムスタンプ", "施設名", "担当者名", "電話番号",
-      "メール", "希望日", "希望時間", "備考", "対応済", "対応日時",
+      "メール", "第1希望日", "第1希望時間", "第2希望日", "第2希望時間",
+      "第3希望日", "第3希望時間", "確度判定", "疾患", "ADL", "判定補足",
+      "備考", "リピーター", "対応済", "対応日時",
     ];
 
     const esc = (v: string | undefined | boolean) => {
@@ -664,13 +668,15 @@ function AdminPageContent() {
     rows.push(assessmentHeader.map(esc).join(","));
     for (const l of assessmentLogs) {
       rows.push(pad([
-        "判定", l.id, l.timestamp,
+        "判定", l.id, l.timestamp, l.facilityName || "",
         l.result === "acceptable" ? "受入可能" : l.result === "safety_risk" ? "要慎重検討" : "要相談",
         l.disease, l.diseaseOther || "", l.adl, l.dementiaLevel || "",
+        l.welfare || "",
         l.medicalDevice ? "あり" : "", l.mentalGrade || "",
         l.selfHarm ? "あり" : "", l.otherHarm ? "あり" : "",
         l.gender, l.budget, l.timing,
         l.reason || "", (l.triggerFlags || []).join(";"),
+        l.isRepeater || "", l.source || "",
         l.isHandled ? "済" : "未", l.handledAt || "",
       ].map(esc)).join(","));
     }
@@ -682,7 +688,12 @@ function AdminPageContent() {
     for (const l of bookingLogs) {
       rows.push(pad([
         "受付", l.id, l.timestamp, l.facilityName, l.contactName, l.phone,
-        l.email, l.preferredDate, l.preferredTime, l.notes,
+        l.email, l.preferredDate, l.preferredTime,
+        l.preferredDate2 || "", l.preferredTime2 || "",
+        l.preferredDate3 || "", l.preferredTime3 || "",
+        l.assessmentStatus || "", l.assessmentDisease || "",
+        l.assessmentAdl || "", l.assessmentReason || "",
+        l.notes, l.isRepeater || "",
         l.isHandled ? "済" : "未", l.handledAt || "",
       ].map(esc)).join(","));
     }
@@ -1047,7 +1058,14 @@ function AdminPageContent() {
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-5 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
+                    {/* サマリー行: 疾患・ADL・予算 */}
+                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-4 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
+                      {log.facilityName && (
+                        <div>
+                          <span className="text-muted">拠点:</span>{" "}
+                          <span className="font-medium">{log.facilityName}</span>
+                        </div>
+                      )}
                       <div>
                         <span className="text-muted">疾患:</span>{" "}
                         <span className="font-medium">
@@ -1060,36 +1078,122 @@ function AdminPageContent() {
                         <span className="font-medium">{log.adl}</span>
                       </div>
                       <div>
-                        <span className="text-muted">性別:</span>{" "}
-                        <span className="font-medium">{log.gender}</span>
-                      </div>
-                      <div>
                         <span className="text-muted">予算:</span>{" "}
                         <span className="font-medium">{log.budget}</span>
                       </div>
-                      <div>
-                        <span className="text-muted">時期:</span>{" "}
-                        <span className="font-medium">{log.timing}</span>
-                      </div>
                     </div>
-                    {(log.medicalDevice || log.selfHarm || log.otherHarm || log.mentalGrade) && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {log.medicalDevice && (
-                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">医療機器あり</span>
-                        )}
-                        {log.mentalGrade && (
-                          <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">障害等級: {log.mentalGrade}</span>
-                        )}
-                        {log.selfHarm && (
-                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">自傷あり</span>
-                        )}
-                        {log.otherHarm && (
-                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">他害あり</span>
-                        )}
+                    {/* 展開ボタン */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAssessments((prev) => {
+                        const next = new Set(prev);
+                        next.has(log.id) ? next.delete(log.id) : next.add(log.id);
+                        return next;
+                      })}
+                      className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-dark transition"
+                    >
+                      <svg className={`h-3.5 w-3.5 transition-transform ${expandedAssessments.has(log.id) ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {expandedAssessments.has(log.id) ? "詳細を閉じる" : "詳細を表示"}
+                    </button>
+                    {/* 展開時の詳細表示 */}
+                    {expandedAssessments.has(log.id) && (
+                      <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3">
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 sm:text-xs">
+                          {log.facilityName && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">拠点名</dt>
+                              <dd className="font-medium">{log.facilityName}</dd>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">判定結果</dt>
+                            <dd className="font-medium">
+                              {log.result === "acceptable" ? "受入可能" : log.result === "safety_risk" ? "要慎重検討" : "要相談"}
+                            </dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">疾患</dt>
+                            <dd className="font-medium">{log.disease}{log.diseaseOther ? `（${log.diseaseOther}）` : ""}</dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">ADL</dt>
+                            <dd className="font-medium">{log.adl}</dd>
+                          </div>
+                          {log.dementiaLevel && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">認知症レベル</dt>
+                              <dd className="font-medium">{log.dementiaLevel}</dd>
+                            </div>
+                          )}
+                          {log.gender && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">性別</dt>
+                              <dd className="font-medium">{log.gender}</dd>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">予算</dt>
+                            <dd className="font-medium">{log.budget}</dd>
+                          </div>
+                          {log.timing && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">入居希望時期</dt>
+                              <dd className="font-medium">{log.timing}</dd>
+                            </div>
+                          )}
+                          {log.welfare && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">生活保護</dt>
+                              <dd className="font-medium">{log.welfare}</dd>
+                            </div>
+                          )}
+                          {(log.medicalDevice || log.mentalGrade || log.selfHarm || log.otherHarm) && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <dt className="shrink-0 text-muted w-24">特記事項</dt>
+                              <dd className="flex flex-wrap gap-1.5">
+                                {log.medicalDevice && (
+                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">医療機器あり</span>
+                                )}
+                                {log.mentalGrade && (
+                                  <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">障害等級: {log.mentalGrade}</span>
+                                )}
+                                {log.selfHarm && (
+                                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">自傷あり</span>
+                                )}
+                                {log.otherHarm && (
+                                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">他害あり</span>
+                                )}
+                              </dd>
+                            </div>
+                          )}
+                          {log.reason && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <dt className="shrink-0 text-muted w-24">判定補足</dt>
+                              <dd className="font-medium">{log.reason}</dd>
+                            </div>
+                          )}
+                          {log.isRepeater && log.isRepeater !== "いいえ" && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">リピーター</dt>
+                              <dd className="font-medium">{log.isRepeater}</dd>
+                            </div>
+                          )}
+                          {log.source && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">記録元</dt>
+                              <dd className="font-medium">{log.source === "direct" ? "判定フォーム" : log.source === "booking_linked" ? "受付連動" : log.source}</dd>
+                            </div>
+                          )}
+                          {log.triggerFlags && log.triggerFlags.length > 0 && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <dt className="shrink-0 text-muted w-24">トリガー</dt>
+                              <dd className="font-medium text-xs">{log.triggerFlags.join(", ")}</dd>
+                            </div>
+                          )}
+                        </dl>
                       </div>
-                    )}
-                    {log.reason && (
-                      <p className="mt-2 text-sm text-muted sm:text-xs">{log.reason}</p>
                     )}
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                       <button
@@ -1241,7 +1345,8 @@ function AdminPageContent() {
                         </button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-4 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
+                    {/* サマリー行: 担当者・電話・第1希望 */}
+                    <div className="grid grid-cols-1 gap-y-1.5 text-sm sm:grid-cols-3 sm:gap-x-4 sm:gap-y-1 sm:text-xs">
                       <div>
                         <span className="text-muted">担当者:</span>{" "}
                         <span className="font-medium">{log.contactName}</span>
@@ -1251,22 +1356,103 @@ function AdminPageContent() {
                         <span className="font-medium">{log.phone}</span>
                       </div>
                       <div>
-                        <span className="text-muted">希望日:</span>{" "}
+                        <span className="text-muted">第1希望:</span>{" "}
                         <span className="font-medium">
-                          {log.preferredDate}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted">時間:</span>{" "}
-                        <span className="font-medium">
-                          {log.preferredTime}
+                          {log.preferredDate} {log.preferredTime || "指定なし"}
                         </span>
                       </div>
                     </div>
-                    {log.notes && (
-                      <p className="mt-2 text-sm text-muted sm:text-xs">
-                        備考: {log.notes}
-                      </p>
+                    {/* 展開ボタン */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedBookings((prev) => {
+                        const next = new Set(prev);
+                        next.has(log.id) ? next.delete(log.id) : next.add(log.id);
+                        return next;
+                      })}
+                      className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-dark transition"
+                    >
+                      <svg className={`h-3.5 w-3.5 transition-transform ${expandedBookings.has(log.id) ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {expandedBookings.has(log.id) ? "詳細を閉じる" : "詳細を表示"}
+                    </button>
+                    {/* 展開時の詳細表示 */}
+                    {expandedBookings.has(log.id) && (
+                      <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3">
+                        <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 sm:text-xs">
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">施設名</dt>
+                            <dd className="font-medium">{log.facilityName}</dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">担当者名</dt>
+                            <dd className="font-medium">{log.contactName}</dd>
+                          </div>
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">電話番号</dt>
+                            <dd className="font-medium">{log.phone}</dd>
+                          </div>
+                          {log.email && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">メール</dt>
+                              <dd className="font-medium">{log.email}</dd>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <dt className="shrink-0 text-muted w-24">第1希望</dt>
+                            <dd className="font-medium">{log.preferredDate} {log.preferredTime || "指定なし"}</dd>
+                          </div>
+                          {log.preferredDate2 && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">第2希望</dt>
+                              <dd className="font-medium">{log.preferredDate2} {log.preferredTime2 || "指定なし"}</dd>
+                            </div>
+                          )}
+                          {log.preferredDate3 && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">第3希望</dt>
+                              <dd className="font-medium">{log.preferredDate3} {log.preferredTime3 || "指定なし"}</dd>
+                            </div>
+                          )}
+                          {log.assessmentStatus && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">確度判定</dt>
+                              <dd className="font-medium">{log.assessmentStatus}</dd>
+                            </div>
+                          )}
+                          {log.assessmentDisease && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">疾患</dt>
+                              <dd className="font-medium">{log.assessmentDisease}</dd>
+                            </div>
+                          )}
+                          {log.assessmentAdl && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">ADL</dt>
+                              <dd className="font-medium">{log.assessmentAdl}</dd>
+                            </div>
+                          )}
+                          {log.assessmentReason && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <dt className="shrink-0 text-muted w-24">判定補足</dt>
+                              <dd className="font-medium">{log.assessmentReason}</dd>
+                            </div>
+                          )}
+                          {log.notes && (
+                            <div className="flex gap-2 sm:col-span-2">
+                              <dt className="shrink-0 text-muted w-24">備考</dt>
+                              <dd className="font-medium">{log.notes}</dd>
+                            </div>
+                          )}
+                          {log.isRepeater && log.isRepeater !== "いいえ" && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-muted w-24">リピーター</dt>
+                              <dd className="font-medium">{log.isRepeater}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      </div>
                     )}
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                       <button

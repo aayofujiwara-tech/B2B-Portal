@@ -17,6 +17,7 @@ export interface SlotConfig {
 export interface AssessmentLog {
   id: string;
   timestamp: string;
+  facilityName?: string;
   disease: string;
   diseaseOther?: string;
   adl: string;
@@ -24,6 +25,7 @@ export interface AssessmentLog {
   gender: string;
   budget: string;
   timing: string;
+  welfare?: string;
   medicalDevice?: boolean;
   mentalGrade?: string;
   selfHarm?: boolean;
@@ -31,6 +33,8 @@ export interface AssessmentLog {
   result: "acceptable" | "consultation" | "safety_risk";
   reason?: string;
   triggerFlags?: string[];
+  isRepeater?: string;
+  source?: string;
   agreed_terms?: boolean;
   agreed_consent?: boolean;
   agreed_at?: string;
@@ -47,7 +51,16 @@ export interface BookingLog {
   email: string;
   preferredDate: string;
   preferredTime: string;
+  preferredDate2?: string;
+  preferredTime2?: string;
+  preferredDate3?: string;
+  preferredTime3?: string;
+  assessmentStatus?: string;
+  assessmentDisease?: string;
+  assessmentAdl?: string;
+  assessmentReason?: string;
   notes: string;
+  isRepeater?: string;
   agreed_terms?: boolean;
   agreed_consent?: boolean;
   agreed_at?: string;
@@ -436,7 +449,7 @@ export interface BookingNotificationPayload {
 }
 
 export async function sendBookingNotification(
-  booking: Omit<BookingLog, "id" | "timestamp"> & {
+  booking: Omit<BookingLog, "id" | "timestamp" | "isRepeater"> & {
     allDateSlots?: { date: string; timeSlot: string }[];
     isRepeater?: boolean;
   }
