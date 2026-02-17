@@ -21,6 +21,8 @@ interface BookingLogEntry {
   assessmentReason?: string;
   notes: string;
   isRepeater?: string;
+  isHandled?: boolean;
+  handledAt?: string;
 }
 
 // ---------------------------------------------------------------------------

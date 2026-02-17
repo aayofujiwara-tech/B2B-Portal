@@ -15,6 +15,8 @@ interface AssessmentLogEntry {
   reason?: string;
   isRepeater?: string;
   source?: string;
+  isHandled?: boolean;
+  handledAt?: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -17,27 +17,11 @@ import {
 } from "@/app/lib/slotStore";
 
 // ---------------------------------------------------------------------------
-// localStorage オーバーレイ（対応済み状態・非表示ログ）
-// スプレッドシートには isHandled/handledAt 列がないため、ローカルで管理する
+// localStorage: 非表示ログID管理（削除用）
+// 対応済み状態はスプレッドシートで管理
 // ---------------------------------------------------------------------------
-const HANDLED_ASSESSMENTS_KEY = "b2b_handled_assessments";
-const HANDLED_BOOKINGS_KEY = "b2b_handled_bookings";
 const HIDDEN_ASSESSMENT_IDS_KEY = "b2b_hidden_assessment_ids";
 const HIDDEN_BOOKING_IDS_KEY = "b2b_hidden_booking_ids";
-
-type HandledOverlay = Record<string, { isHandled: boolean; handledAt?: string }>;
-
-function getHandledOverlay(key: string): HandledOverlay {
-  if (typeof window === "undefined") return {};
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : {};
-}
-
-function saveHandledOverlay(key: string, overlay: HandledOverlay) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(key, JSON.stringify(overlay));
-  }
-}
 
 function getHiddenIds(key: string): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -53,28 +37,31 @@ function addHiddenIds(key: string, ids: string[]) {
   }
 }
 
-function mergeAssessmentOverlay(apiLogs: AssessmentLog[]): AssessmentLog[] {
-  const hidden = getHiddenIds(HIDDEN_ASSESSMENT_IDS_KEY);
-  const handled = getHandledOverlay(HANDLED_ASSESSMENTS_KEY);
-  return apiLogs
-    .filter((log) => !hidden.has(log.id))
-    .map((log) => ({
-      ...log,
-      isHandled: handled[log.id]?.isHandled ?? false,
-      handledAt: handled[log.id]?.handledAt,
-    }));
+function filterHiddenLogs<T extends { id: string }>(apiLogs: T[], hiddenKey: string): T[] {
+  const hidden = getHiddenIds(hiddenKey);
+  return apiLogs.filter((log) => !hidden.has(log.id));
 }
 
-function mergeBookingOverlay(apiLogs: BookingLog[]): BookingLog[] {
-  const hidden = getHiddenIds(HIDDEN_BOOKING_IDS_KEY);
-  const handled = getHandledOverlay(HANDLED_BOOKINGS_KEY);
-  return apiLogs
-    .filter((log) => !hidden.has(log.id))
-    .map((log) => ({
-      ...log,
-      isHandled: handled[log.id]?.isHandled ?? false,
-      handledAt: handled[log.id]?.handledAt,
-    }));
+async function updateHandledStatus(
+  sheetType: "assessment" | "booking",
+  rowTimestamp: string,
+  isHandled: boolean,
+): Promise<boolean> {
+  try {
+    const res = await fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "updateHandledStatus",
+        sheetType,
+        rowTimestamp,
+        isHandled,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 import { trackEvent } from "@/app/lib/analytics";
 import { ALLOWED_DOMAINS } from "@/app/lib/auth";
@@ -476,16 +463,16 @@ function AdminPageContent() {
       setFacilitySlots(slots);
     }
 
-    // 判定ログ
+    // 判定ログ（isHandled/handledAt はスプレッドシートから取得済み）
     if (assessmentsResult.ok && assessmentsResult.data) {
-      setAssessmentLogs(mergeAssessmentOverlay(assessmentsResult.data));
+      setAssessmentLogs(filterHiddenLogs(assessmentsResult.data, HIDDEN_ASSESSMENT_IDS_KEY));
     } else {
       setAssessmentLogs([]);
     }
 
     // 受付ログ
     if (bookingsResult.ok && bookingsResult.data) {
-      setBookingLogs(mergeBookingOverlay(bookingsResult.data));
+      setBookingLogs(filterHiddenLogs(bookingsResult.data, HIDDEN_BOOKING_IDS_KEY));
     } else {
       setBookingLogs([]);
     }
@@ -1198,21 +1185,30 @@ function AdminPageContent() {
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                       <button
                         type="button"
-                        onClick={() => {
-                          const overlay = getHandledOverlay(HANDLED_ASSESSMENTS_KEY);
-                          const current = overlay[log.id]?.isHandled ?? false;
-                          overlay[log.id] = {
-                            isHandled: !current,
-                            handledAt: !current ? new Date().toISOString() : undefined,
-                          };
-                          saveHandledOverlay(HANDLED_ASSESSMENTS_KEY, overlay);
+                        onClick={async () => {
+                          const current = log.isHandled ?? false;
+                          const newHandled = !current;
+                          const newHandledAt = newHandled ? new Date().toISOString() : undefined;
+                          // 楽観的UI更新
                           setAssessmentLogs((prev) =>
                             prev.map((l) =>
                               l.id === log.id
-                                ? { ...l, isHandled: !current, handledAt: !current ? new Date().toISOString() : undefined }
+                                ? { ...l, isHandled: newHandled, handledAt: newHandledAt }
                                 : l
                             )
                           );
+                          const ok = await updateHandledStatus("assessment", log.timestamp, newHandled);
+                          if (!ok) {
+                            // ロールバック
+                            setAssessmentLogs((prev) =>
+                              prev.map((l) =>
+                                l.id === log.id
+                                  ? { ...l, isHandled: current, handledAt: log.handledAt }
+                                  : l
+                              )
+                            );
+                            showToast("対応状態の更新に失敗しました");
+                          }
                         }}
                         className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
                           log.isHandled
@@ -1457,21 +1453,30 @@ function AdminPageContent() {
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                       <button
                         type="button"
-                        onClick={() => {
-                          const overlay = getHandledOverlay(HANDLED_BOOKINGS_KEY);
-                          const current = overlay[log.id]?.isHandled ?? false;
-                          overlay[log.id] = {
-                            isHandled: !current,
-                            handledAt: !current ? new Date().toISOString() : undefined,
-                          };
-                          saveHandledOverlay(HANDLED_BOOKINGS_KEY, overlay);
+                        onClick={async () => {
+                          const current = log.isHandled ?? false;
+                          const newHandled = !current;
+                          const newHandledAt = newHandled ? new Date().toISOString() : undefined;
+                          // 楽観的UI更新
                           setBookingLogs((prev) =>
                             prev.map((l) =>
                               l.id === log.id
-                                ? { ...l, isHandled: !current, handledAt: !current ? new Date().toISOString() : undefined }
+                                ? { ...l, isHandled: newHandled, handledAt: newHandledAt }
                                 : l
                             )
                           );
+                          const ok = await updateHandledStatus("booking", log.timestamp, newHandled);
+                          if (!ok) {
+                            // ロールバック
+                            setBookingLogs((prev) =>
+                              prev.map((l) =>
+                                l.id === log.id
+                                  ? { ...l, isHandled: current, handledAt: log.handledAt }
+                                  : l
+                              )
+                            );
+                            showToast("対応状態の更新に失敗しました");
+                          }
                         }}
                         className={`flex min-h-[44px] items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] ${
                           log.isHandled

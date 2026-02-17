@@ -78,6 +78,14 @@ function doPost(e) {
       ).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // --- 対応完了ステータス更新 ---
+    if (json.type === "updateHandledStatus") {
+      updateHandledStatusOnSheet(ss, json.sheetType, json.rowTimestamp, json.isHandled);
+      return ContentService.createTextOutput(
+        JSON.stringify({ ok: true })
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // --- 判定ログ専用リクエスト ---
     if (json.type === "assessment") {
       recordAssessmentLog(ss, json.body);
@@ -107,6 +115,8 @@ function doPost(e) {
       "判定補足",
       "備考",
       "リピーター",
+      "対応完了",
+      "対応日時",
     ];
 
     var sheet = getOrCreateSheet(ss, "受付ログ", RECEPTION_HEADERS);
@@ -133,6 +143,8 @@ function doPost(e) {
       assessment.reason || "",
       body.notes || "",
       body.isRepeater ? "はい" : "いいえ",
+      "",
+      "",
     ];
 
     // --- 参照用シート（直近30件） ---
@@ -330,6 +342,8 @@ function readAssessmentLogsFromSheet() {
       reason: String(row[8] || ""),
       isRepeater: String(row[9] || ""),
       source: String(row[10] || ""),
+      isHandled: row[11] === true || String(row[11] || "").toUpperCase() === "TRUE",
+      handledAt: row[12] instanceof Date ? row[12].toISOString() : String(row[12] || ""),
     });
   }
 
@@ -409,6 +423,8 @@ function readReceptionLogsFromSheet() {
       assessmentReason: String(row[11] || ""),
       notes: String(row[12] || ""),
       isRepeater: String(row[13] || ""),
+      isHandled: row[14] === true || String(row[14] || "").toUpperCase() === "TRUE",
+      handledAt: row[15] instanceof Date ? row[15].toISOString() : String(row[15] || ""),
     });
   }
 
@@ -458,6 +474,8 @@ function recordAssessmentLog(ss, data) {
     "判定補足",
     "リピーター",
     "記録元",
+    "対応完了",
+    "対応日時",
   ];
 
   var rowData = [
@@ -472,6 +490,8 @@ function recordAssessmentLog(ss, data) {
     data.reason || "",
     data.isRepeater || "",
     data.source || "direct",
+    "",
+    "",
   ];
 
   // --- 参照用シート（直近30件） ---
@@ -493,6 +513,55 @@ function recordAssessmentLog(ss, data) {
 /**
  * メール本文を整形する
  */
+// =========================================================================
+// 対応完了ステータス更新
+// sheetType: "assessment" | "booking"
+// rowTimestamp: 対象行のタイムスタンプ（ISO形式）
+// isHandled: true | false
+// =========================================================================
+function updateHandledStatusOnSheet(ss, sheetType, rowTimestamp, isHandled) {
+  var sheetName = sheetType === "assessment" ? "判定ログ" : "受付ログ";
+  var handledColOffset = sheetType === "assessment" ? 12 : 15; // 0-indexed: 対応完了カラム
+  var handledAtColOffset = sheetType === "assessment" ? 13 : 16; // 0-indexed: 対応日時カラム
+
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return;
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var cellTimestamp = data[i][0];
+    var isoTimestamp = cellTimestamp instanceof Date
+      ? cellTimestamp.toISOString()
+      : String(cellTimestamp || "");
+
+    if (isoTimestamp === rowTimestamp) {
+      // 参照用シートの該当行を更新
+      sheet.getRange(i + 1, handledColOffset + 1).setValue(isHandled ? "TRUE" : "");
+      sheet.getRange(i + 1, handledAtColOffset + 1).setValue(isHandled ? new Date() : "");
+      break;
+    }
+  }
+
+  // 履歴シートも同様に更新
+  var historySheetName = sheetName + "_履歴";
+  var historySheet = ss.getSheetByName(historySheetName);
+  if (!historySheet) return;
+
+  var historyData = historySheet.getDataRange().getValues();
+  for (var j = 1; j < historyData.length; j++) {
+    var hCellTimestamp = historyData[j][0];
+    var hIsoTimestamp = hCellTimestamp instanceof Date
+      ? hCellTimestamp.toISOString()
+      : String(hCellTimestamp || "");
+
+    if (hIsoTimestamp === rowTimestamp) {
+      historySheet.getRange(j + 1, handledColOffset + 1).setValue(isHandled ? "TRUE" : "");
+      historySheet.getRange(j + 1, handledAtColOffset + 1).setValue(isHandled ? new Date() : "");
+      break;
+    }
+  }
+}
+
 // =========================================================================
 // 通知設定シート — 内部読み取り（スプレッドシートオブジェクト渡し）
 // =========================================================================

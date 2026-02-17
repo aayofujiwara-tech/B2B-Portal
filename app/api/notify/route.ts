@@ -51,6 +51,13 @@ export async function POST(req: NextRequest) {
       invalidateAssessmentLogsCache();
     } else if (payload.type === "writeNotificationEmails") {
       // 通知先メール書き込みはログキャッシュに影響しない
+    } else if (payload.type === "updateHandledStatus") {
+      // 対応完了更新 → 該当するログキャッシュを無効化
+      if (payload.sheetType === "assessment") {
+        invalidateAssessmentLogsCache();
+      } else {
+        invalidateBookingLogsCache();
+      }
     } else {
       // 受付ログ書き込み（デフォルト）→ 受付ログ + 判定ログ（booking_linked）両方を無効化
       invalidateBookingLogsCache();
