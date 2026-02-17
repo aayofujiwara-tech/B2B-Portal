@@ -204,6 +204,15 @@ export default function TopPage() {
           </p>
         </div>
 
+        {/* 電話案内バナー */}
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-center">
+          <p className="text-base font-bold text-slate-800 sm:text-lg">
+            お急ぎの方は直接お電話ください:{" "}
+            <a href="tel:07032445497" className="text-primary underline">070-3244-5497</a>
+            <span className="ml-1 text-sm font-medium text-slate-600">（担当：生田）</span>
+          </p>
+        </div>
+
         {/* Slot Progress */}
         <div className="mb-8">
           <SlotProgressBar facilityId={facility || undefined} onSlotsLoaded={handleSlotsLoaded} />
