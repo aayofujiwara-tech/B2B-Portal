@@ -521,8 +521,8 @@ function recordAssessmentLog(ss, data) {
 // =========================================================================
 function updateHandledStatusOnSheet(ss, sheetType, rowTimestamp, isHandled) {
   var sheetName = sheetType === "assessment" ? "判定ログ" : "受付ログ";
-  var handledColOffset = sheetType === "assessment" ? 12 : 15; // 0-indexed: 対応完了カラム
-  var handledAtColOffset = sheetType === "assessment" ? 13 : 16; // 0-indexed: 対応日時カラム
+  var handledColOffset = sheetType === "assessment" ? 11 : 14; // 0-indexed: 対応完了カラム
+  var handledAtColOffset = sheetType === "assessment" ? 12 : 15; // 0-indexed: 対応日時カラム
 
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return;
