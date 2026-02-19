@@ -10,10 +10,13 @@ import {
 import { trackEvent } from "@/app/lib/analytics";
 
 /** ポーリング間隔（ミリ秒）。後から調整しやすいよう定数化。 */
-const POLLING_INTERVAL_MS = 300_000; // 5分
+const POLLING_INTERVAL_MS = 60_000; // 1分
 
 /** stale-while-revalidate 用の localStorage キー */
 const CACHE_KEY = "b2b_slot_cache";
+
+/** 管理画面からのリロード通知用 localStorage キー */
+const INVALIDATION_KEY = "b2b_slot_invalidated_at";
 
 function getElapsedLabel(isoTimestamp: string): string {
   const diff = Date.now() - new Date(isoTimestamp).getTime();
@@ -117,8 +120,9 @@ export default function SlotProgressBar({ facilityId, onSlotsLoaded }: SlotProgr
     [facilityId],
   );
 
-  const fetchSlots = useCallback(() => {
-    fetch("/api/slots")
+  const fetchSlots = useCallback((bustCache = false) => {
+    const url = bustCache ? `/api/slots?t=${Date.now()}` : "/api/slots";
+    fetch(url)
       .then((res) => res.json())
       .then((data: Record<string, SlotConfig>) => {
         writeCache(data);
@@ -185,6 +189,17 @@ export default function SlotProgressBar({ facilityId, onSlotsLoaded }: SlotProgr
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [ready, fetchSlots]);
+
+  // --- 管理画面からのリロード通知を検知して即時再取得 ---
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === INVALIDATION_KEY && e.newValue) {
+        fetchSlots(true);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [fetchSlots]);
 
   if (!ready) {
     return <div className="h-24 animate-pulse rounded-xl bg-slate-100" />;

@@ -548,6 +548,8 @@ function AdminPageContent() {
         const result = await res.json();
         if (!res.ok || result.error) throw new Error(result.error || "不明なエラー");
         if (result.slots) setFacilitySlots(result.slots as Record<FacilityId, SlotConfig>);
+        // 公開ページの SlotProgressBar に即時再取得を通知
+        try { localStorage.setItem("b2b_slot_invalidated_at", String(Date.now())); } catch {}
       })
       .catch((e) => {
         console.error("[admin] リロードエラー:", e);
